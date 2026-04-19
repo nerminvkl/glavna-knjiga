@@ -1,0 +1,443 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+
+    <!-- HEADER -->
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+          <a href="{% url 'home' %}">Početna</a> ›
+          <a href="{% url 'glavna_knjiga' partner.id %}">{{ partner.naziv_1 }}</a> ›
+          Kartica
+        </div>
+        <div class="up-title">Kartica konta</div>
+      </div>
+      <div class="up-firm-badge">
+        <span class="up-firm-sifra">{{ partner.sifra }}</span>
+        <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
+        <span class="up-firm-year">{{ godina.godina }}</span>
+      </div>
+    </div>
+
+    <!-- FILTER KARTICA -->
+    <div class="kartica-filter-wrap">
+      <div class="kartica-filter-box">
+        <div class="kartica-filter-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Pregled analitičke kartice
+        </div>
+        <form method="get" class="kartica-filter-form">
+          <div class="kartica-filter-field">
+            <label>KONTO</label>
+            <input type="text" id="konto-search" placeholder="Unesite broj ili naziv konta..."
+              autocomplete="off" oninput="searchKonto(this.value)"
+              value="{% if odabrani_konto %}{{ odabrani_konto.broj }} — {{ odabrani_konto.naziv }}{% endif %}">
+            <div id="konto-dropdown" class="konto-dropdown" style="display:none;"></div>
+            <input type="hidden" name="konto" id="konto-id" value="{% if odabrani_konto %}{{ odabrani_konto.id }}{% endif %}">
+          </div>
+          <button type="submit" class="kartica-filter-btn">Prikaži karticu</button>
+        </form>
+      </div>
+    </div>
+
+    {% if odabrani_konto %}
+    <!-- KONTO INFO -->
+    <div class="kartica-konto-info">
+      <div class="kartica-konto-left">
+        <span class="kartica-konto-broj">{{ odabrani_konto.broj }}</span>
+        <span class="kartica-konto-naziv">{{ odabrani_konto.naziv }}</span>
+        <span class="kartica-konto-tip">{{ odabrani_konto.get_tip_display }}</span>
+      </div>
+      <a href="/knjizenje/kartica/{{ partner.id }}/{{ odabrani_konto.id }}/print/" target="_blank" class="kartica-print-btn">
+        🖨 Štampaj karticu
+      </a>
+    </div>
+
+    <!-- TABELA -->
+    <div class="up-table-card">
+      <div class="up-table-head">
+        <div class="up-th" style="width:100px;">KONTO</div>
+        <div class="up-th" style="width:110px;">DAT.DOK.</div>
+        <div class="up-th" style="width:80px;">NALOG</div>
+        <div class="up-th" style="flex:1;">OPIS</div>
+        <div class="up-th up-th-num">DUGUJE</div>
+        <div class="up-th up-th-num">POTRAŽUJE</div>
+        <div class="up-th up-th-num">SALDO</div>
+      </div>
+
+      <div id="stavke-lista">
+        {% if stavke %}
+          {% with running_saldo=0 %}
+          {% for stavka in stavke %}
+          <div class="up-row">
+            <div class="up-td" style="width:100px;">
+              <span class="up-konto-badge">{{ stavka.konto.broj }}</span>
+            </div>
+            <div class="up-td up-td-date" style="width:110px;">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
+            <div class="up-td" style="width:80px; font-family:monospace; color:rgba(255,255,255,0.4); font-size:12px;">
+              #{{ stavka.knjizenje.broj_naloga|stringformat:"04d" }}
+            </div>
+            <div class="up-td" style="flex:1;">
+              <div class="up-opis-main">{{ stavka.opis|default:stavka.knjizenje.opis|default:"—" }}</div>
+              {% if stavka.knjizenje.dokument_broj %}
+              <div class="up-opis-sub">{{ stavka.knjizenje.dokument_broj }}</div>
+              {% endif %}
+            </div>
+            <div class="up-td up-td-num">
+              {% if stavka.duguje and stavka.duguje > 0 %}
+              <span class="up-amount up-amount-d">{{ stavka.duguje|floatformat:2 }}</span>
+              {% else %}<span style="color:rgba(255,255,255,0.2);">—</span>{% endif %}
+            </div>
+            <div class="up-td up-td-num">
+              {% if stavka.potrazuje and stavka.potrazuje > 0 %}
+              <span class="up-amount up-amount-p">{{ stavka.potrazuje|floatformat:2 }}</span>
+              {% else %}<span style="color:rgba(255,255,255,0.2);">—</span>{% endif %}
+            </div>
+            <div class="up-td up-td-num">
+              <span style="color:rgba(255,255,255,0.5); font-family:monospace; font-size:12px;">—</span>
+            </div>
+          </div>
+          {% endfor %}
+          {% endwith %}
+        {% else %}
+          <div class="up-empty">Nema stavki za odabrani konto u ovoj godini.</div>
+        {% endif %}
+      </div>
+
+      <!-- FOOTER TOTALS -->
+      <div class="up-table-footer">
+        <div class="up-footer-totals" style="min-width:500px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; gap:20px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="up-total-label">D :</span>
+              <span class="up-total-val up-total-d">{{ ukupno_duguje|floatformat:2 }}</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="up-total-label">P :</span>
+              <span class="up-total-val up-total-p">{{ ukupno_potrazuje|floatformat:2 }}</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="up-total-label">S :</span>
+              <span class="up-total-val" style="color:{% if saldo == 0 %}#34d399{% elif saldo > 0 %}#60a5fa{% else %}#fbbf24{% endif %};">
+                {{ saldo|floatformat:2 }}
+              </span>
+            </div>
+          </div>
+          <div class="up-razlika">
+            <span class="up-razlika-label">{{ odabrani_konto.broj }} {{ odabrani_konto.naziv }}</span>
+            <span class="up-razlika-val {% if saldo == 0 %}zero{% endif %}">S: {{ saldo|floatformat:2 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% endif %}
+
+  </div>
+</div>
+
+<style>
+.up-page {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  padding: 90px 32px 40px;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.up-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.up-breadcrumb { color: rgba(255,255,255,0.3); font-size: 12px; margin-bottom: 6px; }
+.up-breadcrumb a { color: rgba(255,255,255,0.4); text-decoration: none; }
+.up-breadcrumb a:hover { color: #fff; }
+.up-title { color: #fff; font-size: 22px; font-weight: 700; }
+
+.up-firm-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 16px; border-radius: 10px;
+}
+.up-firm-sifra { color: #60a5fa; font-size: 12px; font-weight: 700; font-family: monospace; }
+.up-firm-naziv { color: #fff; font-size: 13px; font-weight: 500; }
+.up-firm-year {
+  background: rgba(96,165,250,0.15); border: 1px solid rgba(96,165,250,0.3);
+  color: #93c5fd; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+}
+
+/* FILTER BOX */
+.kartica-filter-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.kartica-filter-box {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 20px 28px;
+  width: 100%;
+  max-width: 680px;
+}
+
+.kartica-filter-title {
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kartica-filter-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.kartica-filter-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.kartica-filter-field label {
+  color: rgba(255,255,255,0.35);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.kartica-filter-field input {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.kartica-filter-field input:focus { border-color: rgba(96,165,250,0.5); }
+.kartica-filter-field input::placeholder { color: rgba(255,255,255,0.2); }
+
+.kartica-filter-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 11px 24px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.kartica-filter-btn:hover { background: #1d4ed8; }
+
+/* KONTO DROPDOWN */
+.konto-dropdown {
+  position: fixed;
+  background: #1e3a5f;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  z-index: 99999;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.konto-item {
+  padding: 10px 14px; cursor: pointer;
+  display: flex; gap: 10px; align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.konto-item:hover { background: rgba(255,255,255,0.08); }
+.konto-item-broj { color: #60a5fa; font-weight: 700; font-family: monospace; font-size: 13px; min-width: 70px; }
+.konto-item-naziv { color: #fff; font-size: 13px; }
+
+/* KONTO INFO BAR */
+.kartica-konto-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(96,165,250,0.08);
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+}
+
+.kartica-konto-left { display: flex; align-items: center; gap: 12px; }
+
+.kartica-konto-broj {
+  font-family: monospace; font-size: 16px; font-weight: 800;
+  color: #93c5fd; background: rgba(96,165,250,0.15);
+  border: 1px solid rgba(96,165,250,0.3);
+  padding: 4px 12px; border-radius: 8px;
+}
+
+.kartica-konto-naziv { color: #fff; font-size: 14px; font-weight: 600; }
+
+.kartica-konto-tip {
+  color: rgba(255,255,255,0.35); font-size: 11px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 2px 8px; border-radius: 6px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.kartica-print-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.6);
+  padding: 8px 18px; border-radius: 9px;
+  font-size: 13px; font-weight: 500;
+  text-decoration: none; transition: all 0.2s;
+}
+.kartica-print-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* TABLE */
+.up-table-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px; overflow: hidden; flex: 1;
+}
+
+.up-table-head {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04); gap: 8px;
+}
+
+.up-th { color: rgba(255,255,255,0.3); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; }
+.up-th-num { width: 120px; text-align: right; }
+
+.up-row {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  gap: 8px; transition: background 0.15s;
+}
+.up-row:hover { background: rgba(255,255,255,0.04); }
+
+.up-td { color: rgba(255,255,255,0.75); font-size: 13px; }
+.up-td-date { color: rgba(255,255,255,0.4); font-size: 12px; }
+.up-td-num { width: 120px; text-align: right; }
+.up-opis-main { color: #fff; font-size: 13px; }
+.up-opis-sub { color: rgba(255,255,255,0.3); font-size: 11px; margin-top: 2px; }
+
+.up-konto-badge {
+  background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.2);
+  color: #93c5fd; font-family: monospace; font-size: 12px; font-weight: 700;
+  padding: 3px 9px; border-radius: 6px;
+}
+
+.up-amount { font-weight: 600; font-family: monospace; font-size: 13px; }
+.up-amount-d { color: #60a5fa; }
+.up-amount-p { color: #34d399; }
+
+.up-empty { text-align: center; color: rgba(255,255,255,0.2); font-size: 13px; padding: 40px 20px; }
+
+.up-table-footer {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 14px 16px; display: flex;
+  justify-content: flex-end;
+  background: rgba(255,255,255,0.03);
+}
+
+.up-footer-totals { display: flex; flex-direction: column; gap: 6px; min-width: 340px; }
+.up-total-label { color: rgba(255,255,255,0.4); font-size: 12px; }
+.up-total-val { font-family: monospace; font-size: 14px; font-weight: 700; }
+.up-total-d { color: #60a5fa; }
+.up-total-p { color: #34d399; }
+
+.up-razlika {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 4px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.up-razlika-label { color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; font-family: monospace; }
+.up-razlika-val { font-family: monospace; font-size: 16px; font-weight: 800; color: #fbbf24; }
+.up-razlika-val.zero { color: #34d399; }
+</style>
+
+<script>
+let searchTimer = null;
+
+function searchKonto(val) {
+  clearTimeout(searchTimer);
+  const dropdown = document.getElementById('konto-dropdown');
+  const input = document.getElementById('konto-search');
+
+  if (val.length < 1) {
+    dropdown.style.display = 'none';
+    document.getElementById('konto-id').value = '';
+    return;
+  }
+
+  searchTimer = setTimeout(() => {
+    fetch(`/konto/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.innerHTML = data.results.length === 0
+          ? '<div style="padding:12px;color:rgba(255,255,255,0.4);text-align:center;">Nema rezultata</div>'
+          : data.results.map(k => `
+              <div class="konto-item" onclick="odaberiKonto(${k.id},'${k.broj}','${k.naziv.replace(/'/g,"\\'")}')">
+                <span class="konto-item-broj">${k.broj}</span>
+                <span class="konto-item-naziv">${k.naziv}</span>
+              </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
+function odaberiKonto(id, broj, naziv) {
+  document.getElementById('konto-id').value = id;
+  document.getElementById('konto-search').value = `${broj} — ${naziv}`;
+  document.getElementById('konto-dropdown').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.kartica-filter-field'))
+    document.getElementById('konto-dropdown').style.display = 'none';
+});
+
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime, 1000);
+updateTime();
+</script>
+
+{% endblock %}

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <title>Kartica — {{ konto.broj }} — {{ partner.naziv_1 }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11pt;
+      color: #000;
+      background: #fff;
+      padding: 14mm 16mm;
+    }
+
+    /* PRINT DUGME */
+    .no-print {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ZAGLAVLJE */
+    .firma-naziv { font-size: 13pt; font-weight: bold; margin-bottom: 2px; }
+    .firma-sub { font-size: 10pt; margin-bottom: 2px; }
+    .firma-meta { font-size: 10pt; margin-bottom: 12px; }
+
+    .header-divider {
+      border: none;
+      border-top: 1px solid #000;
+      margin: 8px 0;
+    }
+
+    .doc-info { font-size: 10pt; margin-bottom: 4px; }
+    .doc-info-bold { font-weight: bold; }
+
+    /* KONTO LINIJA */
+    .konto-line {
+      font-size: 11pt;
+      font-weight: bold;
+      margin-bottom: 12px;
+      margin-top: 4px;
+    }
+
+    /* PROMET HEADER */
+    .promet-header {
+      text-align: right;
+      font-size: 10pt;
+      letter-spacing: 0.1em;
+      margin-bottom: 2px;
+    }
+
+    /* TABELA HEADER */
+    .table-header {
+      display: flex;
+      border-bottom: 1px dashed #000;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+      font-size: 10pt;
+    }
+
+    .col-datum  { width: 115px; }
+    .col-nalog  { width: 65px; }
+    .col-opis   { flex: 1; }
+    .col-duguje { width: 110px; text-align: right; }
+    .col-pot    { width: 110px; text-align: right; }
+
+    /* TABELA REDOVI */
+    .table-body { margin-bottom: 8px; }
+
+    .table-row {
+      display: flex;
+      font-size: 10pt;
+      padding: 2px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .table-row:last-child { border-bottom: none; }
+
+    /* TOTALI */
+    .totals-divider {
+      border: none;
+      border-top: 1px solid #000;
+      margin: 6px 0;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0;
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+
+    .totals-label { width: 200px; text-align: right; padding-right: 12px; }
+    .totals-val   { width: 110px; text-align: right; font-weight: bold; }
+
+    .saldo-line {
+      display: flex;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 4px 0;
+      margin-top: 4px;
+      font-size: 10pt;
+      font-weight: bold;
+    }
+
+    .saldo-konto  { flex: 1; }
+    .saldo-d      { width: 110px; text-align: right; }
+    .saldo-p      { width: 110px; text-align: right; }
+    .saldo-s      { width: 110px; text-align: right; }
+
+    /* FOOTER */
+    .print-footer {
+      margin-top: 20px;
+      border-top: 1px solid #000;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
+    }
+
+    @media print {
+      body { padding: 8mm 10mm; }
+      .no-print { display: none !important; }
+      @page { margin: 10mm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;font-family:monospace;">
+      🖨 Štampaj
+    </button>
+    <button onclick="window.close()" style="background:#eee;color:#333;border:1px solid #ccc;padding:10px 20px;font-size:13px;border-radius:4px;cursor:pointer;font-family:monospace;">
+      ✕ Zatvori
+    </button>
+  </div>
+
+  <!-- ZAGLAVLJE -->
+  <div class="firma-naziv">{{ partner.naziv_1 }}</div>
+  {% if partner.naziv_2 %}<div class="firma-sub">{{ partner.naziv_2 }}</div>{% endif %}
+  <div class="firma-sub">{{ partner.ptt }} {{ partner.mjesto }}</div>
+  {% if partner.telefon %}<div class="firma-meta">Tel: {{ partner.telefon }}</div>{% endif %}
+
+  <hr class="header-divider">
+
+  <div class="doc-info">Strana : 1</div>
+  <div class="doc-info">Dana : {{ godina.godina }}-01-01 / {% now "d.m.Y" %}</div>
+  <div class="doc-info doc-info-bold">ANALITIČKA KARTICA GLAVNE KNJIGE</div>
+  <div class="doc-info doc-info-bold">KONTO : {{ konto.broj }} {{ konto.naziv }}</div>
+
+  <hr class="header-divider">
+
+  <!-- PROMET HEADER -->
+  <div class="promet-header">P &nbsp; R &nbsp; O &nbsp; M &nbsp; E &nbsp; T</div>
+
+  <!-- TABELA HEADER -->
+  <div class="table-header">
+    <div class="col-datum">Datum</div>
+    <div class="col-nalog">Nalog</div>
+    <div class="col-opis">Opis knjiženja</div>
+    <div class="col-duguje">Duguje</div>
+    <div class="col-pot">Potražuje</div>
+  </div>
+
+  <!-- TABELA REDOVI -->
+  <div class="table-body">
+    {% for stavka in stavke %}
+    <div class="table-row">
+      <div class="col-datum">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
+      <div class="col-nalog">{{ stavka.knjizenje.broj_naloga|stringformat:"04d" }}</div>
+      <div class="col-opis">{{ stavka.opis|default:stavka.knjizenje.opis|default:"—" }}{% if stavka.knjizenje.dokument_broj %} {{ stavka.knjizenje.dokument_broj }}{% endif %}</div>
+      <div class="col-duguje">
+        {% if stavka.duguje and stavka.duguje > 0 %}{{ stavka.duguje|floatformat:2 }}{% else %}0.00{% endif %}
+      </div>
+      <div class="col-pot">
+        {% if stavka.potrazuje and stavka.potrazuje > 0 %}{{ stavka.potrazuje|floatformat:2 }}{% else %}0.00{% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div style="padding:10px 0; color:#888;">Nema stavki za ovaj konto.</div>
+    {% endfor %}
+  </div>
+
+  <!-- TOTALI -->
+  <hr class="totals-divider">
+
+  <div class="totals-row">
+    <span class="totals-label">Ukupno duguje:</span>
+    <span class="totals-val">{{ ukupno_duguje|floatformat:2 }}</span>
+    <span style="width:110px;"></span>
+  </div>
+  <div class="totals-row">
+    <span class="totals-label">Ukupno potražuje:</span>
+    <span style="width:110px;"></span>
+    <span class="totals-val">{{ ukupno_potrazuje|floatformat:2 }}</span>
+  </div>
+
+  <hr class="totals-divider">
+
+  <!-- SALDO LINIJA -->
+  <div class="saldo-line">
+    <div class="saldo-konto">{{ konto.broj }} {{ konto.naziv }}</div>
+    <div class="saldo-d">D: {{ ukupno_duguje|floatformat:2 }}</div>
+    <div class="saldo-p">P: {{ ukupno_potrazuje|floatformat:2 }}</div>
+    <div class="saldo-s">S: {{ saldo|floatformat:2 }}</div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="print-footer">
+    <span>MNM LOGIC — Sistem za upravljanje poslovanjem</span>
+    <span>Štampano: {% now "d.m.Y H:i" %}</span>
+  </div>
+
+</body>
+</html>

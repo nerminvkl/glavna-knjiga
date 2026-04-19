@@ -1,0 +1,155 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="twocol-page">
+    {% if messages %}
+    <div class="messages-bar">
+      {% for msg in messages %}
+      <div class="msg msg-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="twocol-header">
+      <div class="twocol-title">Analitički konti</div>
+      <div class="twocol-sub">
+        <a href="{% url 'glavna_knjiga' partner.id %}" style="color:rgba(255,255,255,0.4);text-decoration:none;">{{ partner.naziv_1 }}</a>
+        › Matični podaci › Analitika
+      </div>
+    </div>
+
+    <div class="twocol-layout">
+
+      <!-- FORMA -->
+      <div class="twocol-left">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            {% if edit_obj %}
+              <span class="panel-badge edit">Izmjena</span>
+              <span class="panel-head-title">Izmjena analitičkog konta</span>
+            {% else %}
+              <span class="panel-badge new">Novi unos</span>
+              <span class="panel-head-title">Dodaj analitički konto</span>
+            {% endif %}
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-body">
+
+              <div class="field">
+                <label>ŠIFRA</label>
+                <input type="text" name="sifra" placeholder="Npr. 2110501"
+                  value="{% if edit_obj %}{{ edit_obj.sifra }}{% endif %}">
+              </div>
+
+              <div class="field">
+                <label>NAZIV</label>
+                <input type="text" name="naziv" placeholder="Naziv analitičkog konta..."
+                  value="{% if edit_obj %}{{ edit_obj.naziv }}{% endif %}">
+              </div>
+
+              <div class="field">
+                <label>SINTETIČKI KONTO</label>
+                <select name="sinteticki_konto">
+                  <option value="">— Odaberite —</option>
+                  {% for sk in sinteticki_konti %}
+                  <option value="{{ sk.id }}" {% if edit_obj and edit_obj.sinteticki_konto.id == sk.id %}selected{% endif %}>
+                    {{ sk.konto.broj }} — {{ sk.naziv }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="field">
+                <label>PARTNER (opciono)</label>
+                <select name="partner">
+                  <option value="">— Bez partnera —</option>
+                  {% for p in svi_partneri %}
+                  <option value="{{ p.id }}" {% if edit_obj and edit_obj.partner.id == p.id %}selected{% endif %}>
+                    {{ p.sifra }} — {{ p.naziv_1 }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="field-check">
+                <label class="toggle-switch">
+                  <input type="checkbox" name="aktivan" {% if not edit_obj or edit_obj.aktivan %}checked{% endif %}>
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+                <span>Aktivan</span>
+              </div>
+
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">
+                {% if edit_obj %}Sačuvaj{% else %}Dodaj{% endif %}
+              </button>
+              {% if edit_obj %}
+              <a href="{% url 'analitika' partner.id %}" class="btn-ghost">Odustani</a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- LISTA -->
+      <div class="twocol-right">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            <span class="panel-head-title">Analitički konti</span>
+            <span class="panel-count">{{ lista|length }} zapisa</span>
+          </div>
+          <div class="list-wrap">
+            {% for obj in lista %}
+            <div class="list-row {% if edit_obj and edit_obj.id == obj.id %}list-row-active{% endif %}">
+              <div class="list-row-main">
+                <span class="list-row-sifra">{{ obj.sifra }}</span>
+                <span class="list-row-title">{{ obj.naziv }}</span>
+                {% if obj.aktivan %}
+                <span class="badge-active">Aktivan</span>
+                {% else %}
+                <span class="badge-inactive">Neaktivan</span>
+                {% endif %}
+              </div>
+              {% if obj.sinteticki_konto %}
+              <div class="list-row-sub">Sint: {{ obj.sinteticki_konto.konto.broj }} — {{ obj.sinteticki_konto.naziv }}</div>
+              {% endif %}
+              {% if obj.partner %}
+              <div class="list-row-sub">Partner: {{ obj.partner.naziv_1 }}</div>
+              {% endif %}
+              <div class="list-row-actions">
+                <a href="{% url 'analitika_edit' partner.id obj.id %}" class="btn-edit">Izmijeni</a>
+                <form method="post" action="{% url 'analitika_delete' partner.id obj.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-delete" onclick="return confirm('Obrisati?')">Obriši</button>
+                </form>
+              </div>
+            </div>
+            {% empty %}
+            <div class="list-empty">Nema analitičkih konta. Dodajte prvi.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime, 1000); updateTime();
+</script>
+
+{% endblock %}

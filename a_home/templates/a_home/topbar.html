@@ -1,0 +1,22 @@
+<div class="topbar">
+    <div class="topbar-brand">
+      <div><span class="brand-dot"></span><span class="brand-name">{{ request.user.company_name|default:"MNM LOGIC s.d." }}</span></div>
+      <div class="brand-sub">{{ request.user.location|default:"Velika Kladuša" }}</div>
+    </div>
+  
+    <button class="nav-hamburger" onclick="toggleNav()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  
+    <nav class="topbar-nav" id="topbar-nav">
+      <a href="{% url 'home' %}"        class="nav-btn {% if request.resolver_match.url_name == 'pocetna' %}active{% endif %}">Početna</a>
+      <a href="{% url 'godine' %}"         class="nav-btn {% if request.resolver_match.url_name == 'godine' %}active{% endif %}">Poslovna godina</a>
+      <a href="{% url 'partneri' %}"       class="nav-btn {% if request.resolver_match.url_name == 'partneri' %}active{% endif %}">Partneri</a>
+      <a href="{% url 'artikli' %}"        class="nav-btn {% if request.resolver_match.url_name == 'artikli' %}active{% endif %}">Artikli</a>
+    </nav>
+  
+    <div class="topbar-time">
+      <div class="dt-time" id="dt-time"></div>
+      <div class="dt-date" id="dt-date"></div>
+    </div>
+  </div>

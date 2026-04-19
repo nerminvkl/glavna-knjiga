@@ -1,0 +1,68 @@
+{% extends 'a_home/base_two_col.html' %}
+
+{% block page_title %}Artikli{% endblock %}
+{% block page_sub %}Upravljanje artiklima{% endblock %}
+{% block list_title %}Lista artikala{% endblock %}
+{% block cancel_url %}{% url 'artikli' %}{% endblock %}
+
+{% block form_fields %}
+<div class="field-row">
+  <div class="field" style="flex:0 0 130px">
+    <label>ŠIFRA</label>
+    {{ form.sifra }}
+  </div>
+  <div class="field">
+    <label>NAZIV ARTIKLA</label>
+    {{ form.naziv }}
+  </div>
+</div>
+<div class="field-row">
+  <div class="field">
+    <label>GRUPA</label>
+    {{ form.grupa }}
+  </div>
+  <div class="field">
+    <label>JEDINICA MJERE</label>
+    {{ form.jedinica_mjere }}
+  </div>
+</div>
+<div class="field-row">
+  <div class="field">
+    <label>CIJENA</label>
+    {{ form.cijena }}
+  </div>
+  <div class="field">
+    <label>POREZ</label>
+    {{ form.porez }}
+  </div>
+</div>
+<div class="field-check">
+  {{ form.aktivan }}
+  <label for="{{ form.aktivan.id_for_label }}">Aktivan</label>
+</div>
+{% endblock %}
+
+{% block list_content %}
+{% for obj in lista %}
+<div class="list-row {% if edit_obj.pk == obj.pk %}list-row-active{% endif %}">
+  <div class="list-row-main">
+    <span class="list-row-sifra">{{ obj.sifra }}</span>
+    <span class="list-row-title">{{ obj.naziv }}</span>
+  </div>
+  <div class="list-row-sub">
+    {% if obj.jedinica_mjere %}{{ obj.jedinica_mjere }}{% endif %}
+    {% if obj.cijena %} · {{ obj.cijena }} KM{% endif %}
+    {% if obj.porez %} · {{ obj.porez }}{% endif %}
+  </div>
+  <div class="list-row-actions">
+    <a href="{% url 'artikal_edit' obj.pk %}" class="btn-edit">Izmijeni</a>
+    <form method="post" action="{% url 'artikal_delete' obj.pk %}" onsubmit="return confirm('Deaktivirati artikal {{ obj.naziv }}?')">
+      {% csrf_token %}
+      <button type="submit" class="btn-delete">Ukloni</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="list-empty">Nema unesenih artikala.</div>
+{% endfor %}
+{% endblock %}

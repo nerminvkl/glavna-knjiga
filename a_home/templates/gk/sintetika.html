@@ -1,0 +1,189 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="twocol-page">
+    {% if messages %}
+    <div class="messages-bar">
+      {% for msg in messages %}
+      <div class="msg msg-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="twocol-header">
+      <div class="twocol-title">Sintetički konti</div>
+      <div class="twocol-sub">
+        <a href="{% url 'glavna_knjiga' partner.id %}" style="color:rgba(255,255,255,0.4);text-decoration:none;">{{ partner.naziv_1 }}</a>
+        › Matični podaci › Sintetika
+      </div>
+    </div>
+
+    <div class="twocol-layout">
+
+      <!-- FORMA -->
+      <div class="twocol-left">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            {% if edit_obj %}
+              <span class="panel-badge edit">Izmjena</span>
+              <span class="panel-head-title">Izmjena sintetičkog konta</span>
+            {% else %}
+              <span class="panel-badge new">Novi unos</span>
+              <span class="panel-head-title">Dodaj sintetički konto</span>
+            {% endif %}
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-body">
+
+              <div class="field">
+                <label>KONTO</label>
+                <input type="text" id="konto-search" placeholder="Broj ili naziv konta..."
+                  autocomplete="off" oninput="searchKonto(this.value)"
+                  value="{% if edit_obj %}{{ edit_obj.konto.broj }} — {{ edit_obj.konto.naziv }}{% endif %}">
+                <div id="konto-dropdown" class="konto-dropdown" style="display:none;"></div>
+                <input type="hidden" name="konto" id="konto-id" value="{% if edit_obj %}{{ edit_obj.konto.id }}{% endif %}">
+              </div>
+
+              <div class="field">
+                <label>NAZIV</label>
+                <input type="text" name="naziv" placeholder="Naziv sintetičkog konta..."
+                  value="{% if edit_obj %}{{ edit_obj.naziv }}{% endif %}">
+              </div>
+
+              <div class="field-check">
+                <label class="toggle-switch">
+                  <input type="checkbox" name="aktivan" {% if not edit_obj or edit_obj.aktivan %}checked{% endif %}>
+                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                </label>
+                <span>Aktivan</span>
+              </div>
+
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">
+                {% if edit_obj %}Sačuvaj{% else %}Dodaj{% endif %}
+              </button>
+              {% if edit_obj %}
+              <a href="{% url 'sintetika' partner.id %}" class="btn-ghost">Odustani</a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- LISTA -->
+      <div class="twocol-right">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            <span class="panel-head-title">Sintetički konti</span>
+            <span class="panel-count">{{ lista|length }} zapisa</span>
+          </div>
+          <div class="list-wrap">
+            {% for obj in lista %}
+            <div class="list-row {% if edit_obj and edit_obj.id == obj.id %}list-row-active{% endif %}">
+              <div class="list-row-main">
+                <span class="list-row-sifra">{{ obj.konto.broj }}</span>
+                <span class="list-row-title">{{ obj.naziv }}</span>
+                {% if obj.aktivan %}
+                <span class="badge-active">Aktivan</span>
+                {% else %}
+                <span class="badge-inactive">Neaktivan</span>
+                {% endif %}
+              </div>
+              <div class="list-row-sub">{{ obj.konto.naziv }}</div>
+              <div class="list-row-actions">
+                <a href="{% url 'sintetika_edit' partner.id obj.id %}" class="btn-edit">Izmijeni</a>
+                <form method="post" action="{% url 'sintetika_delete' partner.id obj.id %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-delete" onclick="return confirm('Obrisati?')">Obriši</button>
+                </form>
+              </div>
+            </div>
+            {% empty %}
+            <div class="list-empty">Nema sintetičkih konta. Dodajte prvi.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.konto-dropdown {
+  position: fixed;
+  background: #1e3a5f;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  z-index: 99999;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.konto-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.konto-item:hover { background: rgba(255,255,255,0.08); }
+.konto-item-broj { color: #60a5fa; font-weight: 700; font-family: monospace; min-width: 60px; }
+.konto-item-naziv { color: #fff; font-size: 13px; }
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime, 1000); updateTime();
+
+let searchTimer = null;
+function searchKonto(val) {
+  clearTimeout(searchTimer);
+  const dropdown = document.getElementById('konto-dropdown');
+  const input = document.getElementById('konto-search');
+  if (val.length < 1) { dropdown.style.display='none'; return; }
+  searchTimer = setTimeout(() => {
+    fetch(`/konto/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom+4)+'px';
+        dropdown.style.left = rect.left+'px';
+        dropdown.style.width = rect.width+'px';
+        dropdown.innerHTML = data.results.length === 0
+          ? '<div style="padding:12px;color:rgba(255,255,255,0.4);text-align:center;">Nema rezultata</div>'
+          : data.results.map(k => `
+              <div class="konto-item" onclick="odaberiKonto(${k.id},'${k.broj}','${k.naziv.replace(/'/g,"\\'")}')">
+                <span class="konto-item-broj">${k.broj}</span>
+                <span class="konto-item-naziv">${k.naziv}</span>
+              </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
+function odaberiKonto(id, broj, naziv) {
+  document.getElementById('konto-id').value = id;
+  document.getElementById('konto-search').value = `${broj} — ${naziv}`;
+  document.getElementById('konto-dropdown').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.field')) document.getElementById('konto-dropdown').style.display = 'none';
+});
+</script>
+
+{% endblock %}

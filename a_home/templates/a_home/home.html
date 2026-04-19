@@ -1,0 +1,138 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %} 
+
+<div class="portal">
+    <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+    <div class="overlay"></div>
+
+    <div class="topbar">
+      <div class="topbar-brand">
+        <div><span class="brand-dot"></span><span class="brand-name">{{ user.company_name }}</span></div>
+        <div class="brand-sub">{{ user.location }}</div>
+      </div>
+    
+      <button class="nav-hamburger" onclick="toggleNav()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    
+      <nav class="topbar-nav" id="topbar-nav">
+        <a href="{% url 'home' %}" class="nav-btn {% if request.resolver_match.url_name == 'pocetna' %}active{% endif %}">Početna</a>
+        <a href="{% url 'godine' %}" class="nav-btn {% if request.resolver_match.url_name == 'godine' %}active{% endif %}">Poslovna godina</a>
+        <a href="{% url 'partneri' %}" class="nav-btn {% if request.resolver_match.url_name == 'partneri' %}active{% endif %}">Partneri</a>
+        <a href="{% url 'artikli' %}" class="nav-btn {% if request.resolver_match.url_name == 'artikli' %}active{% endif %}">Artikli</a>
+        <a href="{% url 'account_logout' %}" class="nav-btn {% if request.resolver_match.url_name == 'account_logout' %}active{% endif %}">Odjavi se</a>
+      </nav>
+    
+      <div class="topbar-time">
+        <div class="dt-time" id="dt-time"></div>
+        <div class="dt-date" id="dt-date"></div>
+      </div>
+    </div>
+
+    <div class="center">
+      <div class="glass-panel">
+        <div class="eyebrow">
+          <div class="eyebrow-line"></div>
+          <div class="eyebrow-text">Pristup glavnoj knjizi</div>
+          <div class="eyebrow-line"></div>
+        </div>
+
+        <div class="panel-subtitle">Odaberite firmu za pristup glavnoj knjizi</div>
+
+        <div class="firma-select-wrap">
+          <select class="firma-select" id="firma-select" onchange="odaberiPartner(this)">
+            <option value="" disabled selected>— Odaberite firmu —</option>
+            {% for p in partneri %}
+            <option value="{{ p.id }}">{{ p.sifra }} — {{ p.naziv_1 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <div class="divider-text">ili pretražite</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <div class="search-row" style="position:relative;">
+          <input 
+            type="text" 
+            id="search-input"
+            placeholder="Unesite naziv ili šifru firme..." 
+            class="search-input"
+            autocomplete="off"
+            oninput="liveSearch(this.value)"
+          >
+          <div id="search-dropdown" class="search-dropdown" style="display:none;"></div>
+        </div>
+
+        <div class="panel-footer">MNM LOGIC &nbsp;·&nbsp; Sistem za upravljanje poslovanjem</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateTime() {
+      const now = new Date();
+      document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+  
+    let searchTimer = null;
+  
+    function liveSearch(val) {
+      clearTimeout(searchTimer);
+      const dropdown = document.getElementById('search-dropdown');
+      
+      if (val.length < 1) {
+        dropdown.style.display = 'none';
+        return;
+      }
+  
+      searchTimer = setTimeout(() => {
+        fetch(`/partneri/search/?q=${encodeURIComponent(val)}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.results.length === 0) {
+              dropdown.innerHTML = '<div class="search-item no-result">Nema rezultata</div>';
+            } else {
+              dropdown.innerHTML = data.results.map(p => `
+                <div class="search-item" onclick="odaberiIzSearcha(${p.id}, '${p.sifra}', '${p.naziv}')">
+                  <span class="search-sifra">${p.sifra}</span>
+                  <span class="search-naziv">${p.naziv}</span>
+                  <span class="search-mjesto">${p.mjesto}</span>
+                </div>
+              `).join('');
+            }
+            dropdown.style.display = 'block';
+          })
+          .catch(err => console.error('Greška:', err));
+      }, 200);
+    }
+  
+    function odaberiIzSearcha(id, sifra, naziv) {
+      const select = document.getElementById('firma-select');
+      select.value = id;
+      document.getElementById('search-input').value = `${sifra} — ${naziv}`;
+      document.getElementById('search-dropdown').style.display = 'none';
+      window.location.href = `/glavna-knjiga/${id}/`;
+    }
+  
+    function odaberiPartner(select) {
+      if (select.value) {
+        window.location.href = `/glavna-knjiga/${select.value}/`;
+      }
+    }
+  
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.search-row')) {
+        document.getElementById('search-dropdown').style.display = 'none';
+      }
+    });
+  </script>
+  <script src="{% static 'js/navbar.js' %}"></script>
+
+{% endblock %}

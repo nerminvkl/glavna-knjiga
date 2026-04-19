@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ PROJECT_TITLE }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/htmx.org/dist/htmx.js"></script>
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+</head>
+<body class="{% block class %}{% endblock %}" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+	
+    {% include 'includes/messages.html' %}
+
+    {% if show_header != False %}
+        {% include 'includes/header.html' %}
+    {% endif %}
+    
+    {% block layout %}
+    {% endblock %}
+
+</body>
+</html>

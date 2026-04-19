@@ -1,0 +1,90 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %} 
+
+<div class="portal">
+  <img src="{% static 'images/pozadina.png' %}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+
+  {% include 'a_home/topbar.html' %}
+
+  <div class="twocol-page">
+
+    {% if messages %}
+    <div class="messages-bar">
+      {% for msg in messages %}
+      <div class="msg msg-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="twocol-header">
+      <div class="twocol-title">{% block page_title %}{% endblock %}</div>
+      <div class="twocol-sub">{% block page_sub %}{% endblock %}</div>
+    </div>
+
+    <div class="twocol-layout">
+
+      <!-- LEFT: Form -->
+      <div class="twocol-left">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            {% if edit_obj %}
+              <span class="panel-badge edit">Izmjena</span>
+              <span class="panel-head-title">Izmjena zapisa</span>
+            {% else %}
+              <span class="panel-badge new">Novi unos</span>
+              <span class="panel-head-title">Unos novog zapisa</span>
+            {% endif %}
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-body">
+              {% block form_fields %}{% endblock %}
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">
+                {% if edit_obj %}Sačuvaj izmjene{% else %}Dodaj{% endif %}
+              </button>
+              {% if edit_obj %}
+              <a href="{% block cancel_url %}{% endblock %}" class="btn-ghost">Odustani</a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RIGHT: List -->
+      <div class="twocol-right">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            <span class="panel-head-title">{% block list_title %}Lista{% endblock %}</span>
+            <span class="panel-count">{{ lista|length }} zapisa</span>
+          </div>
+          <div class="list-wrap">
+            {% block list_content %}{% endblock %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+  setInterval(updateTime, 1000);
+  updateTime();
+
+  function toggleNav() {
+    const nav = document.getElementById('topbar-nav');
+    const btn = document.querySelector('.nav-hamburger');
+    nav.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+</script>
+{% endblock %}

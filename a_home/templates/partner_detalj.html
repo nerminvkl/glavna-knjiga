@@ -1,0 +1,286 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+
+{% block content %}
+<div class="portal">
+  <img src="{% static 'images/pozadina.png' %}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+
+  {% include 'a_home/topbar.html' %}
+
+  <div class="twocol-page">
+
+    {% if messages %}
+    <div class="messages-bar">
+      {% for msg in messages %}
+      <div class="msg msg-{{ msg.tags }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="twocol-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="{% url 'partneri' %}" class="btn-back">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Nazad
+        </a>
+        <div>
+          <div class="twocol-title">{{ partner.naziv_1 }}</div>
+          <div class="twocol-sub">Šifra: {{ partner.sifra }} · {{ partner.get_entitet_display }}{% if partner.u_sustavu_pdv %} · PDV obveznik{% endif %}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="twocol-layout">
+
+      <!-- LEFT: Edit forma -->
+      <div class="twocol-left">
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            <span class="panel-badge edit">Izmjena</span>
+            <span class="panel-head-title">Uredi podatke partnera</span>
+          </div>
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-body">
+
+              <div class="form-section">Osnovno</div>
+              <div class="field-row">
+                <div class="field" style="flex:0 0 110px">
+                  <label>ŠIFRA</label>
+                  {{ form.sifra }}
+                </div>
+                <div class="field">
+                  <label>NAZIV (1)</label>
+                  {{ form.naziv_1 }}
+                </div>
+              </div>
+              <div class="field">
+                <label>NAZIV (2)</label>
+                {{ form.naziv_2 }}
+              </div>
+
+              <div class="form-section">Adresa</div>
+              <div class="field-row">
+                <div class="field" style="flex:0 0 90px">
+                  <label>PTT</label>
+                  {{ form.ptt }}
+                </div>
+                <div class="field">
+                  <label>MJESTO</label>
+                  {{ form.mjesto }}
+                </div>
+              </div>
+              <div class="field">
+                <label>ULICA</label>
+                {{ form.ulica }}
+              </div>
+
+              <div class="form-section">Kontakt</div>
+              <div class="field-row">
+                <div class="field">
+                  <label>TELEFON</label>
+                  {{ form.telefon }}
+                </div>
+                <div class="field">
+                  <label>FAX</label>
+                  {{ form.fax }}
+                </div>
+              </div>
+
+              <div class="form-section">Finansijski podaci</div>
+              <div class="field">
+                <label>ŽIRO-RAČUN</label>
+                {{ form.ziro_racun }}
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>ŠIFRA SJEDIŠTA</label>
+                  {{ form.sifra_sjedista }}
+                </div>
+                <div class="field">
+                  <label>SINTETIČKI KONTO</label>
+                  {{ form.sinteticki_konto }}
+                </div>
+              </div>
+
+              <div class="form-section">Registracija</div>
+              <div class="field-row">
+                <div class="field">
+                  <label>MATIČNI BROJ</label>
+                  {{ form.maticni_broj }}
+                </div>
+                <div class="field">
+                  <label>POREZNI BROJ</label>
+                  {{ form.porezni_broj }}
+                </div>
+              </div>
+              <div class="field">
+                <label>BR. UPISA U SUD. REG.</label>
+                {{ form.broj_upisa_sud_reg }}
+              </div>
+
+              <div class="form-section">PDV i entitet</div>
+              <div class="field">
+                <label>ENTITET</label>
+                {{ form.entitet }}
+              </div>
+              <div class="toggle-group">
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <span class="toggle-label">U sustavu PDV-a</span>
+                    <span class="toggle-desc">Partner je PDV obveznik</span>
+                  </div>
+                  <label class="toggle-switch">
+                    {{ form.u_sustavu_pdv }}
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  </label>
+                </div>
+                <div class="toggle-item">
+                  <div class="toggle-info">
+                    <span class="toggle-label">Aktivan</span>
+                    <span class="toggle-desc">Partner je aktivan u sistemu</span>
+                  </div>
+                  <label class="toggle-switch">
+                    {{ form.aktivan }}
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Sačuvaj izmjene</button>
+              <a href="{% url 'partneri' %}" class="btn-ghost">Odustani</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- RIGHT: Info kartice -->
+      <div class="twocol-right">
+
+        <!-- Brzi pregled -->
+        <div class="glass-panel-inner" style="margin-bottom:16px;">
+          <div class="panel-head">
+            <span class="panel-head-title">Brzi pregled</span>
+            {% if partner.aktivan %}
+            <span class="badge-active">Aktivan</span>
+            {% else %}
+            <span class="badge-inactive">Neaktivan</span>
+            {% endif %}
+          </div>
+          <div class="detalj-grid">
+            <div class="detalj-item">
+              <span class="detalj-label">Šifra partnera</span>
+              <span class="detalj-value mono">{{ partner.sifra }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Mjesto</span>
+              <span class="detalj-value">{{ partner.mjesto|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">PTT</span>
+              <span class="detalj-value mono">{{ partner.ptt|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Ulica</span>
+              <span class="detalj-value">{{ partner.ulica|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Telefon</span>
+              <span class="detalj-value">{{ partner.telefon|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Fax</span>
+              <span class="detalj-value">{{ partner.fax|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Entitet</span>
+              <span class="detalj-value">{{ partner.get_entitet_display }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">PDV status</span>
+              <span class="detalj-value">
+                {% if partner.u_sustavu_pdv %}
+                <span class="badge-pdv">PDV obveznik</span>
+                {% else %}
+                <span style="color:rgba(255,255,255,0.35)">Nije u sistemu</span>
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Finansijski podaci -->
+        <div class="glass-panel-inner" style="margin-bottom:16px;">
+          <div class="panel-head">
+            <span class="panel-head-title">Finansijski podaci</span>
+          </div>
+          <div class="detalj-grid">
+            <div class="detalj-item full">
+              <span class="detalj-label">Žiro-račun</span>
+              <span class="detalj-value mono">{{ partner.ziro_racun|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Šifra sjedišta</span>
+              <span class="detalj-value mono">{{ partner.sifra_sjedista|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Sintetički konto</span>
+              <span class="detalj-value mono">{{ partner.sinteticki_konto|default:"—" }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Registracijski podaci -->
+        <div class="glass-panel-inner">
+          <div class="panel-head">
+            <span class="panel-head-title">Registracijski podaci</span>
+          </div>
+          <div class="detalj-grid">
+            <div class="detalj-item">
+              <span class="detalj-label">Matični broj</span>
+              <span class="detalj-value mono">{{ partner.maticni_broj|default:"—" }}</span>
+            </div>
+            <div class="detalj-item">
+              <span class="detalj-label">Porezni broj</span>
+              <span class="detalj-value mono">{{ partner.porezni_broj|default:"—" }}</span>
+            </div>
+            <div class="detalj-item full">
+              <span class="detalj-label">Br. upisa u sud. reg.</span>
+              <span class="detalj-value mono">{{ partner.broj_upisa_sud_reg|default:"—" }}</span>
+            </div>
+            <div class="detalj-item full">
+              <span class="detalj-label">Kreiran</span>
+              <span class="detalj-value">{{ partner.kreiran|date:"d.m.Y. H:i" }}</span>
+            </div>
+            <div class="detalj-item full">
+              <span class="detalj-label">Posljednja izmjena</span>
+              <span class="detalj-value">{{ partner.izmijenjen|date:"d.m.Y. H:i" }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+  setInterval(updateTime, 1000);
+  updateTime();
+
+  function toggleNav() {
+    const nav = document.getElementById('topbar-nav');
+    const btn = document.querySelector('.nav-hamburger');
+    nav.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+</script>
+{% endblock %}

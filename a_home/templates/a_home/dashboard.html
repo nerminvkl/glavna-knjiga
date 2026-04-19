@@ -1,0 +1,200 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+
+  {% include 'a_home/topbar.html' %}
+
+  <div class="gk-page">
+
+    <!-- HEADER -->
+    <div class="gk-header">
+      <div class="gk-header-left">
+        <div class="gk-breadcrumb">Početna <span>›</span> Glavna knjiga</div>
+        <h1 class="gk-title">{{ partner.naziv_1 }}</h1>
+        <div class="gk-meta">
+          <span class="gk-meta-tag">{{ partner.mjesto }}</span>
+          <span class="gk-meta-dot"></span>
+          <span class="gk-meta-tag">Šifra: {{ partner.sifra }}</span>
+          <span class="gk-meta-dot"></span>
+          <span class="gk-meta-tag gk-meta-year">{{ request.session.selected_year }}</span>
+        </div>
+      </div>
+      <a href="{% url 'home' %}" class="gk-back-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Promijeni firmu
+      </a>
+    </div>
+
+    <!-- MODULES GRID -->
+    <div class="gk-modules">
+
+      <!-- GLAVNA KNJIGA -->
+      <div class="gk-card" style="--accent: #60a5fa; --accent-bg: rgba(96,165,250,0.12); --accent-border: rgba(96,165,250,0.2);">
+        <div class="gk-card-top">
+          <div class="gk-card-badge" style="background: rgba(96,165,250,0.15); border-color: rgba(96,165,250,0.3); color: #60a5fa;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <div class="gk-card-info">
+            <div class="gk-card-title">Glavna knjiga</div>
+            <div class="gk-card-sub">Finansijsko knjigovodstvo</div>
+          </div>
+          <div class="gk-card-count">6</div>
+        </div>
+      
+        <div class="gk-divider"></div>
+      
+        <div class="gk-links">
+      
+          <!-- MATIČNI PODACI sa podlinkovima -->
+          <div class="gk-link gk-link-parent" onclick="toggleMaticni()">
+            <div class="gk-link-left">
+              <div class="gk-link-num">01</div>
+              <span>Matični podaci</span>
+            </div>
+            <svg class="gk-link-arr" id="maticni-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s;"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+      
+          <div id="maticni-sub" style="display:none; padding-left: 16px;">
+            <a href="{% url 'sintetika' partner.id %}" class="gk-link gk-link-sub">
+              <div class="gk-link-left">
+                <div class="gk-link-num" style="font-size:10px;">01a</div>
+                <span>Sintetika</span>
+              </div>
+              <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="{% url 'analitika' partner.id %}" class="gk-link gk-link-sub">
+              <div class="gk-link-left">
+                <div class="gk-link-num" style="font-size:10px;">01b</div>
+                <span>Analitika</span>
+              </div>
+              <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+      
+          <a href="{% url 'unos_prometa' partner.id %}" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">02</div>
+              <span>Unos prometa</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+      
+          <a href="{% url 'kartica' partner.id %}" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">03</div>
+              <span>Kartica</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+      
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">04</div>
+              <span>Izvještaji</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+      
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">05</div>
+              <span>Analitika izvještaj</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+      
+        </div>
+      </div>
+      
+      <style>
+      .gk-link-parent { cursor: pointer; }
+      .gk-link-sub {
+        font-size: 13px;
+        opacity: 0.85;
+        border-left: 2px solid rgba(96,165,250,0.2);
+        margin-left: 4px;
+        padding-left: 10px !important;
+      }
+      .gk-link-sub:hover { border-left-color: rgba(96,165,250,0.6); }
+      </style>
+      
+      <script>
+      function toggleMaticni() {
+        const sub = document.getElementById('maticni-sub');
+        const arrow = document.getElementById('maticni-arrow');
+        const open = sub.style.display === 'none';
+        sub.style.display = open ? 'block' : 'none';
+        arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+      </script>
+
+      <!-- MALOPRODAJA -->
+      <div class="gk-card" style="--accent: #34d399; --accent-bg: rgba(52,211,153,0.12); --accent-border: rgba(52,211,153,0.2);">
+        <div class="gk-card-top">
+          <div class="gk-card-badge" style="background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </div>
+          <div class="gk-card-info">
+            <div class="gk-card-title">Maloprodaja</div>
+            <div class="gk-card-sub">Robno knjigovodstvo</div>
+          </div>
+          <div class="gk-card-count">4</div>
+        </div>
+
+        <div class="gk-divider"></div>
+
+        <div class="gk-links">
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">01</div>
+              <span>Matični podaci</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">02</div>
+              <span>Kalkulacije</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">03</div>
+              <span>Inventura</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#" class="gk-link">
+            <div class="gk-link-left">
+              <div class="gk-link-num">04</div>
+              <span>Dnevnik</span>
+            </div>
+            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+  setInterval(updateTime, 1000);
+  updateTime();
+</script>
+
+{% endblock %}

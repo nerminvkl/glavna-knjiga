@@ -1,0 +1,48 @@
+{% extends 'a_home/base_two_col.html' %}
+
+{% block page_title %}Poslovne godine{% endblock %}
+{% block page_sub %}Upravljanje poslovnim godinama{% endblock %}
+{% block list_title %}Unesene godine{% endblock %}
+{% block cancel_url %}{% url 'godine' %}{% endblock %}
+
+{% block form_fields %}
+<div class="field">
+  <label>GODINA</label>
+  {{ form.godina }}
+</div>
+<div class="field">
+  <label>NAPOMENA</label>
+  {{ form.napomena }}
+</div>
+<div class="field-check">
+  {{ form.aktivna }}
+  <label for="{{ form.aktivna.id_for_label }}">Aktivna</label>
+</div>
+{% endblock %}
+
+{% block list_content %}
+{% for obj in lista %}
+<div class="list-row {% if edit_obj.pk == obj.pk %}list-row-active{% endif %}">
+  <div class="list-row-main">
+    <span class="list-row-title">{{ obj.godina }}</span>
+    {% if obj.aktivna %}
+    <span class="badge-active">Aktivna</span>
+    {% else %}
+    <span class="badge-inactive">Neaktivna</span>
+    {% endif %}
+  </div>
+  {% if obj.napomena %}
+  <div class="list-row-sub">{{ obj.napomena }}</div>
+  {% endif %}
+  <div class="list-row-actions">
+    <a href="{% url 'godina_edit' obj.pk %}" class="btn-edit">Izmijeni</a>
+    <form method="post" action="{% url 'godina_delete' obj.pk %}" onsubmit="return confirm('Obrisati godinu {{ obj.godina }}?')">
+      {% csrf_token %}
+      <button type="submit" class="btn-delete">Obriši</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="list-empty">Nema unesenih godina.</div>
+{% endfor %}
+{% endblock %}

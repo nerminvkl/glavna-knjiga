@@ -1,0 +1,145 @@
+{% extends 'a_home/base_two_col.html' %}
+
+{% block page_title %}Poslovni partneri{% endblock %}
+{% block page_sub %}Upravljanje poslovnim partnerima{% endblock %}
+{% block list_title %}Lista partnera{% endblock %}
+{% block cancel_url %}{% url 'partneri' %}{% endblock %}
+
+{% block form_fields %}
+<div class="form-section">Osnovno</div>
+<div class="field-row">
+  <div class="field" style="flex:0 0 110px">
+    <label>ŠIFRA</label>
+    {{ form.sifra }}
+  </div>
+  <div class="field">
+    <label>NAZIV PARTNERA</label>
+    {{ form.naziv_1 }}
+  </div>
+</div>
+<div class="field">
+  <label>NAZIV PARTNERA</label>
+  {{ form.naziv_2 }}
+</div>
+
+<div class="form-section">Adresa</div>
+<div class="field-row">
+  <div class="field" style="flex:0 0 90px">
+    <label>PTT</label>
+    {{ form.ptt }}
+  </div>
+  <div class="field">
+    <label>MJESTO</label>
+    {{ form.mjesto }}
+  </div>
+</div>
+<div class="field">
+  <label>ULICA</label>
+  {{ form.ulica }}
+</div>
+
+<div class="form-section">Kontakt</div>
+<div class="field-row">
+  <div class="field">
+    <label>TELEFON</label>
+    {{ form.telefon }}
+  </div>
+  <div class="field">
+    <label>FAX</label>
+    {{ form.fax }}
+  </div>
+</div>
+
+<div class="form-section">Finansijski podaci</div>
+<div class="field">
+  <label>ŽIRO-RAČUN</label>
+  {{ form.ziro_racun }}
+</div>
+<div class="field-row">
+  <div class="field">
+    <label>ŠIFRA SJEDIŠTA</label>
+    {{ form.sifra_sjedista }}
+  </div>
+  <div class="field">
+    <label>SINTETIČKI KONTO</label>
+    {{ form.sinteticki_konto }}
+  </div>
+</div>
+
+<div class="form-section">Registracija</div>
+<div class="field-row">
+  <div class="field">
+    <label>MATIČNI BROJ</label>
+    {{ form.maticni_broj }}
+  </div>
+  <div class="field">
+    <label>POREZNI BROJ</label>
+    {{ form.porezni_broj }}
+  </div>
+</div>
+<div class="field">
+  <label>BR. UPISA U SUD. REG.</label>
+  {{ form.broj_upisa_sud_reg }}
+</div>
+
+<div class="form-section">PDV i entitet</div>
+<div class="field">
+  <label>ENTITET</label>
+  {{ form.entitet }}
+</div>
+
+<div class="toggle-group">
+  <div class="toggle-item">
+    <div class="toggle-info">
+      <span class="toggle-label">U sustavu PDV-a</span>
+      <span class="toggle-desc">Partner je PDV obveznik</span>
+    </div>
+    <label class="toggle-switch">
+      {{ form.u_sustavu_pdv }}
+      <span class="toggle-track">
+        <span class="toggle-thumb"></span>
+      </span>
+    </label>
+  </div>
+
+  <div class="toggle-item">
+    <div class="toggle-info">
+      <span class="toggle-label">Aktivan</span>
+      <span class="toggle-desc">Partner je aktivan u sistemu</span>
+    </div>
+    <label class="toggle-switch">
+      {{ form.aktivan }}
+      <span class="toggle-track">
+        <span class="toggle-thumb"></span>
+      </span>
+    </label>
+  </div>
+</div>
+{% endblock %}
+
+{% block list_content %}
+{% for obj in lista %}
+<div class="list-row {% if edit_obj.pk == obj.pk %}list-row-active{% endif %}">
+  <div class="list-row-main">
+    <span class="list-row-sifra">{{ obj.sifra }}</span>
+    <span class="list-row-title">{{ obj.naziv_1 }}</span>
+    {% if obj.u_sustavu_pdv %}
+    <span class="badge-pdv">PDV</span>
+    {% endif %}
+  </div>
+  <div class="list-row-sub">
+    {{ obj.mjesto }}{% if obj.mjesto and obj.entitet %} · {% endif %}{{ obj.get_entitet_display }}
+  </div>
+  <div class="list-row-actions">
+    <a href="{% url 'partner_edit' obj.pk %}" class="btn-edit">Izmijeni</a>
+    <form method="post" action="{% url 'partner_delete' obj.pk %}"
+          onsubmit="return confirm('Deaktivirati partnera {{ obj.naziv_1 }}?')">
+      {% csrf_token %}
+      <button type="submit" class="btn-delete">Ukloni</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="list-empty">Nema unesenih partnera.</div>
+{% endfor %}
+{% endblock %}

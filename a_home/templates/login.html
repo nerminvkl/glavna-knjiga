@@ -1,0 +1,76 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+
+{% block content %}
+<div class="portal">
+  <img src="{% static 'images/pozadina.png' %}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+
+  <div class="topbar">
+    <div>
+      <div><span class="brand-dot"></span><span class="brand-name">GLAVNA KNJIGA</span></div>
+      <div class="brand-sub">Sistem za upravljanje poslovanjem</div>
+    </div>
+    <div>
+      <div class="dt-time" id="dt-time"></div>
+      <div class="dt-date" id="dt-date"></div>
+    </div>
+  </div>
+
+  <div class="center">
+    <div class="glass-panel">
+
+      <div class="eyebrow">
+        <div class="eyebrow-line"></div>
+        <div class="eyebrow-text">Pristup sistemu</div>
+        <div class="eyebrow-line"></div>
+      </div>
+
+      <div class="panel-title">Dobrodošli</div>
+      <div class="panel-sub">Prijavite se da pristupite glavnoj knjizi</div>
+
+      {% if form.errors %}
+      <div class="error-msg">Pogrešno korisničko ime, lozinka ili godina.</div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="field">
+          <label>KORISNIČKO IME</label>
+          <input type="text" name="username" placeholder="Unesite korisničko ime" autocomplete="username" required>
+        </div>
+
+        <div class="field">
+          <label>LOZINKA</label>
+          <input type="password" name="password" placeholder="Unesite lozinku" autocomplete="current-password" required>
+        </div>
+
+        <div class="field">
+          <label>POSLOVNA GODINA</label>
+          <select name="year" required>
+            <option value="" disabled selected>— Odaberite godinu —</option>
+            {% for year in years %}
+            <option value="{{ year }}">{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="login-btn">Prijava</button>
+      </form>
+
+      <div class="panel-footer">MNM LOGIC &nbsp;·&nbsp; Sistem za upravljanje poslovanjem</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+  setInterval(updateTime, 1000);
+  updateTime();
+</script>
+{% endblock %}
