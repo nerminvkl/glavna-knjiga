@@ -1,0 +1,228 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+          <a href="{% url 'home' %}">Početna</a> ›
+          <a href="{% url 'glavna_knjiga' partner.id %}">{{ partner.naziv_1 }}</a> ›
+          Kalkulacije
+        </div>
+        <div class="up-title">Kalkulacije</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="up-firm-badge">
+          <span class="up-firm-sifra">{{ partner.sifra }}</span>
+          <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
+          <span class="up-firm-year">{{ godina.godina }}</span>
+        </div>
+        <a href="{% url 'nova_kalkulacija' partner.id %}" class="btn-primary" style="text-decoration:none;">+ Nova kalkulacija</a>
+      </div>
+    </div>
+
+    <div class="up-table-wrap">
+      <div class="up-table-card">
+        <div class="up-table-head">
+          <div class="up-th" style="width:130px;">BR. PRIJ. LISTE</div>
+          <div class="up-th" style="width:100px;">DATUM</div>
+          <div class="up-th" style="min-width:180px;flex:1;">DOBAVLJAČ</div>
+          <div class="up-th" style="width:130px;">DOKUMENT</div>
+          <div class="up-th up-th-num" style="width:110px;">IZNOS RAČUNA</div>
+          <div class="up-th up-th-num" style="width:90px;">IZNOS PDV</div>
+          <div class="up-th" style="width:85px;">STATUS</div>
+          <div class="up-th" style="width:170px;"></div>
+        </div>
+
+        {% for k in lista %}
+        <div class="up-row">
+          <div class="up-td" style="width:130px;">
+            <span class="up-konto-badge">{{ k.broj_prij_lista|default:"—" }}</span>
+          </div>
+          <div class="up-td up-td-date" style="width:100px;">
+            {{ k.datum_dokumenta|date:"d.m.Y"|default:"—" }}
+          </div>
+          <div class="up-td" style="min-width:180px;flex:1;">
+            <div class="up-opis-main">{{ k.dobavljac.naziv_1|default:"—" }}</div>
+            {% if k.dokument %}<div class="up-opis-sub">{{ k.dokument }}</div>{% endif %}
+          </div>
+          <div class="up-td" style="width:130px; color:rgba(255,255,255,0.5); font-size:12px;">
+            {{ k.dokument|default:"—" }}
+          </div>
+          <div class="up-td up-td-num" style="width:110px;">
+            <span class="up-amount up-amount-d">{{ k.iznos_racuna|floatformat:3 }}</span>
+          </div>
+          <div class="up-td up-td-num" style="width:90px;">
+            <span class="up-amount up-amount-p">{{ k.iznos_pdv|floatformat:3 }}</span>
+          </div>
+          <div class="up-td" style="width:85px;">
+            {% if k.status == 'zakljucena' %}
+              <span class="badge-inactive">Zaključena</span>
+            {% else %}
+              <span class="badge-active">Otvorena</span>
+            {% endif %}
+          </div>
+          <div class="up-td akcije" style="width:170px;">
+            <a href="{% url 'uredi_kalkulaciju' partner.id k.id %}" class="btn-edit">Uredi</a>
+            <a href="{% url 'print_kalkulacija' k.id %}" target="_blank" class="btn-print">🖨</a>
+            <form method="post" action="{% url 'obrisi_kalkulaciju' k.id %}"
+              style="display:inline;"
+              onsubmit="return confirm('Obrisati kalkulaciju?')">
+              {% csrf_token %}
+              <button type="submit" class="btn-delete">Obriši</button>
+            </form>
+          </div>
+        </div>
+        {% empty %}
+        <div class="up-empty">Nema kalkulacija. Kreirajte prvu klikom na "+ Nova kalkulacija".</div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.up-page {
+  position: relative; z-index: 10; min-height: 100vh;
+  padding: 90px 32px 40px; box-sizing: border-box;
+  font-family: 'Inter', sans-serif; display: flex;
+  flex-direction: column; gap: 16px;
+}
+
+.up-header { display: flex; justify-content: space-between; align-items: flex-end; }
+.up-breadcrumb { color: rgba(255,255,255,0.3); font-size: 12px; margin-bottom: 6px; }
+.up-breadcrumb a { color: rgba(255,255,255,0.4); text-decoration: none; }
+.up-breadcrumb a:hover { color: #fff; }
+.up-title { color: #fff; font-size: 22px; font-weight: 700; }
+
+.up-firm-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 16px; border-radius: 10px;
+}
+.up-firm-sifra { color: #60a5fa; font-size: 12px; font-weight: 700; font-family: monospace; }
+.up-firm-naziv { color: #fff; font-size: 13px; }
+.up-firm-year {
+  background: rgba(96,165,250,0.15); border: 1px solid rgba(96,165,250,0.3);
+  color: #93c5fd; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+}
+
+.btn-primary {
+  background: #2563eb; color: #fff; border: none; border-radius: 10px;
+  padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.2s; white-space: nowrap;
+}
+.btn-primary:hover { background: #1d4ed8; }
+
+/* TABLE */
+.up-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+}
+
+.up-table-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  min-width: 980px;
+}
+
+.up-table-head {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  gap: 8px;
+}
+
+.up-th { color: rgba(255,255,255,0.3); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; white-space: nowrap; }
+.up-th-num { text-align: right; }
+
+.up-row {
+  display: flex; align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  gap: 8px; transition: background 0.15s;
+}
+.up-row:last-child { border-bottom: none; }
+.up-row:hover { background: rgba(255,255,255,0.04); }
+
+.up-td { color: rgba(255,255,255,0.75); font-size: 13px; white-space: nowrap; }
+.up-td-date { color: rgba(255,255,255,0.4); font-size: 12px; }
+.up-td-num { text-align: right; }
+.up-opis-main { color: #fff; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-opis-sub { color: rgba(255,255,255,0.3); font-size: 11px; margin-top: 2px; }
+
+.up-konto-badge {
+  background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.2);
+  color: #93c5fd; font-family: monospace; font-size: 12px; font-weight: 700;
+  padding: 3px 9px; border-radius: 6px; white-space: nowrap;
+}
+
+.up-amount { font-weight: 600; font-family: monospace; font-size: 13px; }
+.up-amount-d { color: #60a5fa; }
+.up-amount-p { color: #34d399; }
+.up-empty { text-align: center; color: rgba(255,255,255,0.2); font-size: 13px; padding: 60px 20px; }
+
+/* AKCIJE */
+.akcije { display: flex; align-items: center; gap: 5px; }
+
+.btn-edit {
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.65);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 7px;
+  padding: 5px 12px; font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500; text-decoration: none;
+  transition: background 0.15s; white-space: nowrap; display: inline-block;
+}
+.btn-edit:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+.btn-print {
+  background: rgba(96,165,250,0.1); color: #93c5fd;
+  border: 1px solid rgba(96,165,250,0.2); border-radius: 7px;
+  padding: 5px 10px; font-size: 13px; text-decoration: none;
+  transition: background 0.15s; white-space: nowrap; display: inline-block;
+}
+.btn-print:hover { background: rgba(96,165,250,0.2); }
+
+.btn-delete {
+  background: rgba(220,38,38,0.1); color: #fca5a5;
+  border: 1px solid rgba(220,38,38,0.2); border-radius: 7px;
+  padding: 5px 10px; font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background 0.15s; white-space: nowrap;
+}
+.btn-delete:hover { background: rgba(220,38,38,0.25); }
+
+.badge-active {
+  background: rgba(22,163,74,0.18); color: #86efac;
+  border: 1px solid rgba(22,163,74,0.25);
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+.badge-inactive {
+  background: rgba(107,114,128,0.18); color: #9ca3af;
+  border: 1px solid rgba(107,114,128,0.25);
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+</script>
+
+{% endblock %}

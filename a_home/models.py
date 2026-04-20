@@ -394,3 +394,83 @@ class AnalitickiKonto(models.Model):
 
     def __str__(self):
         return f"{self.sifra} — {self.naziv}"
+
+# ─────────────────────────────────────────
+#  KALKULACIJA (MALOPRODAJA)
+# ─────────────────────────────────────────
+
+class Kalkulacija(models.Model):
+    STATUS_CHOICES = [
+        ('otvorena',    'Otvorena'),
+        ('zakljucena',  'Zaključena'),
+    ]
+
+    partner           = models.ForeignKey(PoslovniPartner, on_delete=models.PROTECT, related_name='kalkulacije', verbose_name="Firma/Partner")
+    godina            = models.ForeignKey(PoslovnaGodina, on_delete=models.PROTECT, verbose_name="Godina")
+    primalac          = models.CharField(max_length=100, blank=True, verbose_name="Primalac")
+    broj_prij_lista   = models.CharField(max_length=50, blank=True, verbose_name="Broj prijemnog lista")
+    datum_prij_lista  = models.DateField(null=True, blank=True, verbose_name="Datum prijemnog lista")
+    dobavljac         = models.ForeignKey(PoslovniPartner, on_delete=models.SET_NULL, null=True, blank=True, related_name='kalkulacije_dobavljac', verbose_name="Dobavljač")
+    dokument          = models.CharField(max_length=100, blank=True, verbose_name="Dokument")
+    datum_dokumenta   = models.DateField(null=True, blank=True, verbose_name="Datum dokumenta")
+    datum_dospijeca   = models.DateField(null=True, blank=True, verbose_name="Datum dospijeća")
+    datum_prijema     = models.DateField(null=True, blank=True, verbose_name="Datum prijema")
+    knjiga            = models.CharField(max_length=10, default='01', verbose_name="Knjiga")
+    kuf               = models.CharField(max_length=50, blank=True, verbose_name="KUF")
+    iznos_racuna      = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Iznos računa")
+    iznos_pdv         = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Iznos PDV-a")
+    pdv_za_odbiti     = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="PDV za odbiti")
+    pdv_ne_odbiti     = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="PDV ne odbiti")
+    status            = models.CharField(max_length=20, choices=STATUS_CHOICES, default='otvorena', verbose_name="Status")
+    kreirao           = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Kreirao")
+    kreirano          = models.DateTimeField(auto_now_add=True)
+    izmijenjeno       = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-kreirano']
+        verbose_name = "Kalkulacija"
+        verbose_name_plural = "Kalkulacije"
+
+    def __str__(self):
+        return f"Kalk. {self.broj_prij_lista} — {self.partner.naziv_1}"
+
+    @property
+    def ukupno_nabavna(self):
+        return sum(s.nabavna_vrijednost for s in self.stavke.all())
+
+    @property
+    def ukupno_mpc(self):
+        return sum(s.mpc_vrijednost for s in self.stavke.all())
+
+    @property
+    def ukupno_marza(self):
+        return sum(s.marza_vrijednost for s in self.stavke.all())
+
+
+class StavkaKalkulacije(models.Model):
+    kalkulacija      = models.ForeignKey(Kalkulacija, on_delete=models.CASCADE, related_name='stavke', verbose_name="Kalkulacija")
+    porezna_grupa    = models.CharField(max_length=20, blank=True, verbose_name="Porezna grupa")
+    naziv_artikla    = models.CharField(max_length=255, verbose_name="Naziv artikla")
+    jedinica_mjere   = models.CharField(max_length=20, blank=True, verbose_name="Jedinica mjere")
+    kolicina         = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Količina")
+    fakturna_cijena  = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Fakturna cijena")
+    nabavna_cijena   = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Nabavna cijena")
+    marza_postotak   = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name="Marža %")
+    marza_vrijednost = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="Marža vrijednost")
+    porez            = models.CharField(max_length=10, default='P', verbose_name="Porez")
+    mpc              = models.DecimalField(max_digits=15, decimal_places=3, default=0, verbose_name="MPC")
+
+    class Meta:
+        verbose_name = "Stavka kalkulacije"
+        verbose_name_plural = "Stavke kalkulacije"
+
+    def __str__(self):
+        return f"{self.naziv_artikla} | {self.kolicina} x {self.fakturna_cijena}"
+
+    @property
+    def nabavna_vrijednost(self):
+        return self.nabavna_cijena * self.kolicina
+
+    @property
+    def mpc_vrijednost(self):
+        return self.mpc * self.kolicina

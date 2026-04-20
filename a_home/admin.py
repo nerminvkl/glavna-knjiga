@@ -179,3 +179,28 @@ class StavkaInventureAdmin(admin.ModelAdmin):
     )
     search_fields = ('artikal__naziv', 'inventura__naziv') 
     autocomplete_fields = ('inventura', 'artikal')
+
+# ─────────────────────────────────────────
+#  KALKULACIJA
+# ─────────────────────────────────────────
+
+from django.contrib import admin
+from .models import Kalkulacija, StavkaKalkulacije
+
+class StavkaKalkulacijeInline(admin.TabularInline):
+    model = StavkaKalkulacije
+    extra = 0
+
+@admin.register(Kalkulacija)
+class KalkulacijaAdmin(admin.ModelAdmin):
+    list_display = ['id', 'partner', 'godina', 'broj_prij_lista', 'dobavljac', 'datum_dokumenta', 'iznos_racuna', 'status', 'kreirano']
+    list_filter = ['status', 'godina', 'partner']
+    search_fields = ['broj_prij_lista', 'dokument', 'partner__naziv_1', 'dobavljac__naziv_1']
+    inlines = [StavkaKalkulacijeInline]
+    actions = ['obrisi_odabrane']
+
+    def obrisi_odabrane(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f'Obrisano {count} kalkulacija.')
+    obrisi_odabrane.short_description = 'Obriši odabrane kalkulacije'

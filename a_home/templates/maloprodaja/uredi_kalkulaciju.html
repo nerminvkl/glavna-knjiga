@@ -1,0 +1,596 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+          <a href="{% url 'home' %}">Početna</a> ›
+          <a href="{% url 'glavna_knjiga' partner.id %}">{{ partner.naziv_1 }}</a> ›
+          <a href="{% url 'kalkulacije' partner.id %}">Kalkulacije</a> › Unos stavki
+        </div>
+        <div class="up-title">Unos kalkulacije</div>
+      </div>
+      <div class="up-header-right" style="display:flex; gap:8px; align-items:center; flex-wrap:nowrap;">
+        <div class="up-firm-badge">
+          <span class="up-firm-sifra">{{ partner.sifra }}</span>
+          <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
+        </div>
+      
+        <a href="{% url 'print_kalkulacija' kalk.id %}" target="_blank" class="hdr-btn hdr-btn-grey">
+          🖨 Štampaj
+        </a>
+      
+        <a href="{% url 'nova_kalkulacija' partner.id %}" class="hdr-btn hdr-btn-blue">
+          + Nova
+        </a>
+      
+        {% if kalk.status == 'otvorena' %}
+        <form method="post" action="{% url 'zakljuci_kalkulaciju' kalk.id %}" style="display:inline;" onsubmit="return confirm('Zaključiti i otvoriti novu?')">
+          {% csrf_token %}
+          <button type="submit" class="hdr-btn hdr-btn-green">✓ Zaključi i nova</button>
+        </form>
+        {% else %}
+        <span class="hdr-btn hdr-btn-done">✓ Zaključena</span>
+        {% endif %}
+      
+        <a href="{% url 'kalkulacije' partner.id %}" class="hdr-btn hdr-btn-grey">
+          ☰ Lista
+        </a>
+      </div>
+      </div>
+
+    <!-- ZAGLAVLJE INFO BAR -->
+    <div class="up-nalog-bar">
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">BROJ PRIJ. LISTA</span>
+        <span class="up-nalog-value">{{ kalk.broj_prij_lista|default:"—" }}</span>
+      </div>
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">DOBAVLJAČ</span>
+        <span class="up-nalog-value">{{ kalk.dobavljac.naziv_1|default:"—" }}</span>
+      </div>
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">DOKUMENT</span>
+        <span class="up-nalog-value">{{ kalk.dokument|default:"—" }}</span>
+      </div>
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">DATUM</span>
+        <span class="up-nalog-value">{{ kalk.datum_dokumenta|date:"d.m.Y"|default:"—" }}</span>
+      </div>
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">IZNOS RAČUNA</span>
+        <span class="up-nalog-value" style="color:#60a5fa;">{{ kalk.iznos_racuna|floatformat:3 }}</span>
+      </div>
+      <div class="up-nalog-item">
+        <span class="up-nalog-label">PDV</span>
+        <span class="up-nalog-value" style="color:#34d399;">{{ kalk.iznos_pdv|floatformat:3 }}</span>
+      </div>
+    </div>
+
+    <!-- INPUT FORMA ZA STAVKU -->
+    <div class="up-input-card">
+      <div class="kalk-form-title">UNOS KALKULACIJE</div>
+      <div class="kalk-input-grid">
+
+        <!-- ARTIKAL SEARCH -->
+        <div class="up-field kalk-field-xl" style="position:relative;">
+          <label>ARTIKAL</label>
+          <input type="text" id="artikal-search"
+            placeholder="Šifra ili naziv artikla..."
+            autocomplete="off" oninput="searchArtikal(this.value)">
+          <div id="artikal-dropdown" class="kalk-dropdown" style="display:none;"></div>
+        </div>
+      
+        <div class="up-field kalk-field-sm" style="position:relative;">
+            <label>POREZNA GRUPA</label>
+            <input type="text" id="porezna_grupa" placeholder="N ili P..."
+              maxlength="20" autocomplete="off"
+              oninput="searchPorez(this.value)"
+              onkeydown="handlePorezKey(event)">
+            <div id="porez-dropdown" class="kalk-dropdown" style="display:none;"></div>
+          </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>JED. MJERE</label>
+          <input type="text" id="jedinica_mjere" placeholder="KOM">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>KOLIČINA</label>
+          <input type="number" id="kolicina" value="1.000" step="0.001" min="0" oninput="racunaj()">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>FAKTURNA CIJENA</label>
+          <input type="number" id="fakturna_cijena" value="0.000" step="0.001" min="0" oninput="racunajNabavnu()">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>NABAVNA CIJENA</label>
+          <input type="number" id="nabavna_cijena" value="0.000" step="0.001" min="0"
+            oninput="racunajMarzuIzNabavne()" style="color:#60a5fa;">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>MARŽA %</label>
+          <input type="number" id="marza_postotak" value="0.00" step="0.01"
+            oninput="racunajMPC()" style="color:#fbbf24;">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>MARŽA VR.</label>
+          <input type="number" id="marza_vrijednost" value="0.000" step="0.001"
+            readonly style="color:#fbbf24;opacity:0.7;">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>POREZ</label>
+          <input type="text" id="porez" value="P" maxlength="5">
+        </div>
+      
+        <div class="up-field kalk-field-sm">
+          <label>MPC</label>
+          <input type="number" id="mpc" value="0.000" step="0.001" min="0"
+            oninput="racunajMarzuIzMPC()" style="color:#34d399;">
+        </div>
+      
+        <div class="up-field kalk-field-btn">
+          <label>&nbsp;</label>
+          <button class="up-add-btn" onclick="dodajStavku()">Dodaj</button>
+        </div>
+        </div>  
+    </div>
+
+    <!-- TABELA STAVKI -->
+    <div class="up-table-card">
+      <div class="up-table-head">
+        <div class="up-th" style="width:80px;">P.GRUPA</div>
+        <div class="up-th" style="flex:1;">NAZIV ARTIKLA</div>
+        <div class="up-th" style="width:60px;">JM</div>
+        <div class="up-th up-th-num" style="width:90px;">KOLIČINA</div>
+        <div class="up-th up-th-num" style="width:110px;">FAKT. CJ.</div>
+        <div class="up-th up-th-num" style="width:110px;">NAB. CJ.</div>
+        <div class="up-th up-th-num" style="width:80px;">MARŽA %</div>
+        <div class="up-th up-th-num" style="width:110px;">MARŽA VR.</div>
+        <div class="up-th" style="width:50px;">PDV</div>
+        <div class="up-th up-th-num" style="width:110px;">MPC</div>
+        <div class="up-th" style="width:40px;"></div>
+      </div>
+
+      <div id="stavke-lista">
+        {% for s in stavke %}
+        <div class="up-row" id="stavka-{{ s.id }}">
+          <div class="up-td" style="width:80px;"><span class="up-konto-badge">{{ s.porezna_grupa }}</span></div>
+          <div class="up-td" style="flex:1;">{{ s.naziv_artikla }}</div>
+          <div class="up-td" style="width:60px; color:rgba(255,255,255,0.4);">{{ s.jedinica_mjere }}</div>
+          <div class="up-td up-td-num" style="width:90px;">{{ s.kolicina|floatformat:3 }}</div>
+          <div class="up-td up-td-num" style="width:110px;">{{ s.fakturna_cijena|floatformat:3 }}</div>
+          <div class="up-td up-td-num" style="width:110px; color:#60a5fa;">{{ s.nabavna_cijena|floatformat:3 }}</div>
+          <div class="up-td up-td-num" style="width:80px; color:#fbbf24;">{{ s.marza_postotak|floatformat:2 }}</div>
+          <div class="up-td up-td-num" style="width:110px; color:#fbbf24;">{{ s.marza_vrijednost|floatformat:3 }}</div>
+          <div class="up-td" style="width:50px; color:rgba(255,255,255,0.4);">{{ s.porez }}</div>
+          <div class="up-td up-td-num" style="width:110px; color:#34d399;">{{ s.mpc|floatformat:3 }}</div>
+          <div class="up-td" style="width:40px;"><button class="up-del-btn" onclick="obrisiStavku({{ s.id }})">×</button></div>
+        </div>
+        {% empty %}
+        <div class="up-empty" id="up-empty">Nema stavki. Unesite artikal iznad.</div>
+        {% endfor %}
+      </div>
+
+      <!-- TOTALI -->
+      <div class="up-table-footer">
+        <div class="up-footer-totals" style="min-width:500px;">
+          <div class="up-total-row">
+            <span class="up-total-label">Ukupno nabavna vrijednost:</span>
+            <span class="up-total-val up-total-d" id="ukupno-nabavna">{{ ukupno_nabavna|floatformat:3 }}</span>
+          </div>
+          <div class="up-total-row">
+            <span class="up-total-label">Ukupno marža:</span>
+            <span class="up-total-val" style="color:#fbbf24;" id="ukupno-marza">{{ ukupno_marza|floatformat:3 }}</span>
+          </div>
+          <div class="up-razlika">
+            <span class="up-razlika-label">═══ UKUPNO MPC</span>
+            <span class="up-razlika-val zero" id="ukupno-mpc">{{ ukupno_mpc|floatformat:3 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.up-btn-zakljuci {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.up-btn-zakljuci:hover { background: #15803d; }
+
+.up-btn-zakljucena {
+  background: rgba(22,163,74,0.15);
+  color: #86efac;
+  border: 1px solid rgba(22,163,74,0.3);
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; }
+.up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.up-firm-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); padding:8px 16px; border-radius:10px; }
+.up-firm-sifra { color:#60a5fa; font-size:12px; font-weight:700; font-family:monospace; }
+.up-firm-naziv { color:#fff; font-size:13px; }
+.up-btn-print { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 20px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
+
+.up-nalog-bar { display:flex; align-items:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:0 4px; overflow:hidden; flex-wrap:wrap; }
+.up-nalog-item { display:flex; flex-direction:column; gap:3px; padding:12px 20px; border-right:1px solid rgba(255,255,255,0.07); }
+.up-nalog-item:last-child { border-right:none; }
+.up-nalog-label { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.up-nalog-value { color:#fff; font-size:14px; font-weight:600; font-family:monospace; }
+
+.up-input-card { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px 20px; }
+.kalk-form-title { color:rgba(255,255,255,0.4); font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:14px; }
+
+.kalk-input-grid { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.up-field { display:flex; flex-direction:column; gap:6px; }
+.kalk-field-sm { flex:0 0 100px; }
+.kalk-field-xl { flex:2; min-width:200px; }
+.kalk-field-btn { flex:0 0 80px; }
+.up-field label { color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.up-field input { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:9px; color:#fff; font-family:'Inter',sans-serif; font-size:13px; padding:9px 12px; outline:none; transition:border-color 0.2s; width:100%; box-sizing:border-box; }
+.up-field input:focus { border-color:rgba(96,165,250,0.5); }
+.up-field input::placeholder { color:rgba(255,255,255,0.2); }
+.up-add-btn { width:100%; background:#2563eb; color:#fff; border:none; border-radius:9px; padding:10px; font-size:13px; font-weight:600; cursor:pointer; }
+.up-add-btn:hover { background:#1d4ed8; }
+
+.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; overflow:hidden; }
+.up-table-head { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:4px; }
+.up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.08em; }
+.up-th-num { text-align:right; }
+.up-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:4px; transition:background 0.15s; animation:rowIn 0.2s ease; }
+@keyframes rowIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.up-row:hover { background:rgba(255,255,255,0.04); }
+.up-td { color:rgba(255,255,255,0.75); font-size:12px; }
+.up-td-num { text-align:right; font-family:monospace; }
+.up-konto-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; }
+.up-del-btn { width:24px; height:24px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.2); color:#fca5a5; border-radius:5px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; padding:0; }
+.up-del-btn:hover { background:rgba(220,38,38,0.25); }
+.up-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:40px 20px; }
+
+.up-table-footer { border-top:1px solid rgba(255,255,255,0.08); padding:14px 16px; display:flex; justify-content:flex-end; background:rgba(255,255,255,0.03); }
+.up-footer-totals { display:flex; flex-direction:column; gap:6px; }
+.up-total-row { display:flex; justify-content:space-between; align-items:center; }
+.up-total-label { color:rgba(255,255,255,0.4); font-size:12px; }
+.up-total-val { font-family:monospace; font-size:14px; font-weight:700; }
+.up-total-d { color:#60a5fa; }
+.up-razlika { display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); }
+.up-razlika-label { color:rgba(255,255,255,0.5); font-size:11px; font-weight:600; font-family:monospace; }
+.up-razlika-val { font-family:monospace; font-size:16px; font-weight:800; color:#fbbf24; }
+.up-razlika-val.zero { color:#34d399; }
+
+.kalk-dropdown {
+  position: fixed;
+  background: #1e3a5f;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  z-index: 99999;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.kalk-dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.kalk-dropdown-item:hover { background: rgba(255,255,255,0.08); }
+.kalk-dd-sifra { color: #60a5fa; font-weight: 700; font-family: monospace; font-size: 12px; min-width: 55px; }
+.kalk-dd-naziv { color: #fff; font-size: 13px; flex: 1; }
+.kalk-dd-meta { color: rgba(255,255,255,0.35); font-size: 11px; }
+</style>
+
+<script>
+const kalkId = {{ kalk.id }};
+const csrfToken = '{{ csrf_token }}';
+
+// ── Automatski proračun ──────────────────────────
+function racunajNabavnu() {
+  // Fakturna = Nabavna (u ovom modelu iste su)
+  const fc = parseFloat(document.getElementById('fakturna_cijena').value) || 0;
+  document.getElementById('nabavna_cijena').value = fc.toFixed(3);
+  racunaj();
+}
+
+function racunajMarzuIzNabavne() {
+  racunaj();
+}
+
+function racunajMPC() {
+  const nc = parseFloat(document.getElementById('nabavna_cijena').value) || 0;
+  const mp = parseFloat(document.getElementById('marza_postotak').value) || 0;
+  const mpc = nc * (1 + mp / 100);
+  document.getElementById('mpc').value = mpc.toFixed(3);
+  racunaj();
+}
+
+function racunajMarzuIzMPC() {
+  const nc = parseFloat(document.getElementById('nabavna_cijena').value) || 0;
+  const mpc = parseFloat(document.getElementById('mpc').value) || 0;
+  const kol = parseFloat(document.getElementById('kolicina').value) || 1;
+  if (nc > 0) {
+    const mp = ((mpc - nc) / nc) * 100;
+    document.getElementById('marza_postotak').value = mp.toFixed(2);
+    document.getElementById('marza_vrijednost').value = ((mpc - nc) * kol).toFixed(3);
+  }
+}
+
+function racunaj() {
+  const nc = parseFloat(document.getElementById('nabavna_cijena').value) || 0;
+  const mp = parseFloat(document.getElementById('marza_postotak').value) || 0;
+  const kol = parseFloat(document.getElementById('kolicina').value) || 1;
+  const marza_v = nc * kol * mp / 100;
+  const mpc = nc * (1 + mp / 100);
+  document.getElementById('marza_vrijednost').value = marza_v.toFixed(3);
+  document.getElementById('mpc').value = mpc.toFixed(3);
+}
+
+// ── Dodaj stavku ─────────────────────────────────
+function dodajStavku() {
+  const artikalVal = document.getElementById('artikal-search').value.trim();
+  const naziv = artikalVal.includes(' — ')
+    ? artikalVal.split(' — ').slice(1).join(' — ')
+    : artikalVal;
+
+  if (!naziv) { alert('Unesite ili odaberite artikal!'); return; }
+
+  const data = {
+    porezna_grupa:   document.getElementById('porezna_grupa').value,
+    naziv_artikla:   naziv,
+    jedinica_mjere:  document.getElementById('jedinica_mjere').value,
+    kolicina:        document.getElementById('kolicina').value,
+    fakturna_cijena: document.getElementById('fakturna_cijena').value,
+    nabavna_cijena:  document.getElementById('nabavna_cijena').value,
+    marza_postotak:  document.getElementById('marza_postotak').value,
+    porez:           document.getElementById('porez').value,
+    mpc:             document.getElementById('mpc').value,
+  };
+
+  fetch(`/kalkulacija/${kalkId}/dodaj-stavku/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      document.getElementById('up-empty')?.remove();
+      const lista = document.getElementById('stavke-lista');
+      const row = document.createElement('div');
+      row.className = 'up-row';
+      row.id = `stavka-${d.stavka_id}`;
+      row.innerHTML = `
+        <div class="up-td" style="width:80px;"><span class="up-konto-badge">${d.porezna_grupa||'—'}</span></div>
+        <div class="up-td" style="flex:1;">${d.naziv_artikla}</div>
+        <div class="up-td" style="width:60px;color:rgba(255,255,255,0.4);">${d.jedinica_mjere}</div>
+        <div class="up-td up-td-num" style="width:90px;">${parseFloat(d.kolicina).toFixed(3)}</div>
+        <div class="up-td up-td-num" style="width:110px;">${parseFloat(d.fakturna_cijena).toFixed(3)}</div>
+        <div class="up-td up-td-num" style="width:110px;color:#60a5fa;">${parseFloat(d.nabavna_cijena).toFixed(3)}</div>
+        <div class="up-td up-td-num" style="width:80px;color:#fbbf24;">${parseFloat(d.marza_postotak).toFixed(2)}</div>
+        <div class="up-td up-td-num" style="width:110px;color:#fbbf24;">${parseFloat(d.marza_vrijednost).toFixed(3)}</div>
+        <div class="up-td" style="width:50px;color:rgba(255,255,255,0.4);">${d.porez}</div>
+        <div class="up-td up-td-num" style="width:110px;color:#34d399;">${parseFloat(d.mpc).toFixed(3)}</div>
+        <div class="up-td" style="width:40px;"><button class="up-del-btn" onclick="obrisiStavku(${d.stavka_id})">×</button></div>
+      `;
+      lista.appendChild(row);
+      updateTotals(d.ukupno_nabavna, d.ukupno_mpc, d.ukupno_marza);
+      resetForma();
+    }
+  });
+}
+
+function obrisiStavku(id) {
+  if (!confirm('Obrisati stavku?')) return;
+  fetch(`/kalkulacija/stavka/${id}/obrisi/`, {
+    method: 'POST', headers: { 'X-CSRFToken': csrfToken }
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      document.getElementById(`stavka-${id}`)?.remove();
+      updateTotals(d.ukupno_nabavna, d.ukupno_mpc, d.ukupno_marza);
+    }
+  });
+}
+
+function updateTotals(nabavna, mpc, marza) {
+  document.getElementById('ukupno-nabavna').textContent = parseFloat(nabavna).toFixed(3);
+  document.getElementById('ukupno-mpc').textContent = parseFloat(mpc).toFixed(3);
+  document.getElementById('ukupno-marza').textContent = parseFloat(marza).toFixed(3);
+}
+
+function resetForma() {
+  document.getElementById('porezna_grupa').value = '';
+  document.getElementById('naziv_artikla').value = '';
+  document.getElementById('jedinica_mjere').value = '';
+  document.getElementById('kolicina').value = '1.000';
+  document.getElementById('fakturna_cijena').value = '0.000';
+  document.getElementById('nabavna_cijena').value = '0.000';
+  document.getElementById('marza_postotak').value = '0.00';
+  document.getElementById('marza_vrijednost').value = '0.000';
+  document.getElementById('porez').value = 'P';
+  document.getElementById('mpc').value = '0.000';
+  document.getElementById('naziv_artikla').focus();
+}
+
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+
+let artikalTimer = null;
+
+function searchArtikal(val) {
+  clearTimeout(artikalTimer);
+  const dropdown = document.getElementById('artikal-dropdown');
+  const input = document.getElementById('artikal-search');
+
+  if (val.length < 1) { dropdown.style.display = 'none'; return; }
+
+  artikalTimer = setTimeout(() => {
+    fetch(`/api/artikli/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.innerHTML = data.results.length === 0
+          ? '<div style="padding:12px;color:rgba(255,255,255,0.4);text-align:center;">Nema artikla</div>'
+          : data.results.map(a => `
+              <div class="kalk-dropdown-item" onclick="odaberiArtikal('${a.sifra}', '${a.naziv.replace(/'/g,"\\'")}', '${a.jm}', ${a.cijena}, '${a.porez}', '${a.grupa}')">
+                <span class="kalk-dd-sifra">${a.sifra}</span>
+                <span class="kalk-dd-naziv">${a.naziv}</span>
+                <span class="kalk-dd-meta">${a.jm} · ${a.cijena}</span>
+              </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
+function odaberiArtikal(sifra, naziv, jm, cijena, porez, grupa) {
+  // Popuni sva polja iz artikla
+  document.getElementById('artikal-search').value = `${sifra} — ${naziv}`;
+  document.getElementById('naziv_artikla').value
+    ? null : document.getElementById('naziv_artikla') // naziv_artikla se šalje na server
+    ;
+  // Postavi naziv koji ide na server (trebate dodati hidden input)
+  let hiddenNaziv = document.getElementById('naziv_artikla_hidden');
+  if (!hiddenNaziv) {
+    hiddenNaziv = document.createElement('input');
+    hiddenNaziv.type = 'hidden';
+    hiddenNaziv.id = 'naziv_artikla_hidden';
+    document.body.appendChild(hiddenNaziv);
+  }
+  hiddenNaziv.value = naziv;
+
+  document.getElementById('porezna_grupa').value = grupa || '';
+  document.getElementById('jedinica_mjere').value = jm || '';
+  document.getElementById('fakturna_cijena').value = parseFloat(cijena).toFixed(3);
+  document.getElementById('nabavna_cijena').value = parseFloat(cijena).toFixed(3);
+  document.getElementById('porez').value = porez || 'P';
+  document.getElementById('artikal-dropdown').style.display = 'none';
+  racunaj();
+  document.getElementById('kolicina').focus();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#artikal-search') && !e.target.closest('#artikal-dropdown')) {
+    document.getElementById('artikal-dropdown').style.display = 'none';
+  }
+});
+
+function odaberiPorez(select) {
+  const stopa = select.options[select.selectedIndex].dataset.stopa;
+  // Postavi stopu poreza u polje porez
+  document.getElementById('porez').value = stopa ? stopa + '%' : 'P';
+  // Ako ima nabavne cijene, preračunaj MPC sa porezom
+  racunajMPC();
+}
+
+// Porezi iz baze
+const porezi = [
+  {% for p in porezi %}
+  { naziv: "{{ p.naziv }}", stopa: "{{ p.stopa }}" },
+  {% endfor %}
+];
+
+let porezTimer = null;
+
+function searchPorez(val) {
+  clearTimeout(porezTimer);
+  const dropdown = document.getElementById('porez-dropdown');
+  const input = document.getElementById('porezna_grupa');
+
+  if (val.length < 1) { dropdown.style.display = 'none'; return; }
+
+  // Filtriraj — traži po prvom slovu ili dijelu naziva
+  const filtered = porezi.filter(p =>
+    p.naziv.toLowerCase().startsWith(val.toLowerCase()) ||
+    p.naziv.toLowerCase().includes(val.toLowerCase())
+  );
+
+  if (filtered.length === 0) { dropdown.style.display = 'none'; return; }
+
+  // Ako je samo jedan rezultat — auto odaberi
+  if (filtered.length === 1) {
+    odaberiPorezDirektno(filtered[0].naziv, filtered[0].stopa);
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top = (rect.bottom + 4) + 'px';
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.width = rect.width + 'px';
+
+  dropdown.innerHTML = filtered.map(p => `
+    <div class="kalk-dropdown-item" onclick="odaberiPorezDirektno('${p.naziv}', '${p.stopa}')">
+      <span class="kalk-dd-naziv">${p.naziv}</span>
+      <span class="kalk-dd-meta">${p.stopa}%</span>
+    </div>
+  `).join('');
+
+  dropdown.style.display = 'block';
+}
+
+function handlePorezKey(e) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    const val = document.getElementById('porezna_grupa').value;
+    const filtered = porezi.filter(p =>
+      p.naziv.toLowerCase().startsWith(val.toLowerCase())
+    );
+    if (filtered.length > 0) {
+      odaberiPorezDirektno(filtered[0].naziv, filtered[0].stopa);
+    }
+    document.getElementById('porez-dropdown').style.display = 'none';
+  }
+}
+
+function odaberiPorezDirektno(naziv, stopa) {
+  document.getElementById('porezna_grupa').value = naziv;
+  document.getElementById('porez').value = stopa + '%';
+  document.getElementById('porez-dropdown').style.display = 'none';
+  racunajMPC();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#porezna_grupa') && !e.target.closest('#porez-dropdown')) {
+    document.getElementById('porez-dropdown').style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

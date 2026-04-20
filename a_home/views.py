@@ -566,5 +566,205 @@ def kartica_print(request, partner_id, konto_id):
         'ukupno_duguje': ukupno_duguje,
         'ukupno_potrazuje': ukupno_potrazuje,
         'saldo': saldo,
+    })
+
+from .models import Kalkulacija, StavkaKalkulacije
+import json
+
+@login_required
+def kalkulacije_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina_id = request.session.get('selected_year')
+    godina = get_object_or_404(PoslovnaGodina, godina=godina_id)
+    lista = Kalkulacija.objects.filter(partner=partner, godina=godina).order_by('-kreirano')
+    return render(request, 'maloprodaja/kalkulacije.html', {
+        'partner': partner,
+        'lista': lista,
+        'godina': godina,
         'show_header': False,
     })
+
+@login_required
+def nova_kalkulacija(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina_id = request.session.get('selected_year')
+    godina = get_object_or_404(PoslovnaGodina, godina=godina_id)
+    dobavljaci = PoslovniPartner.objects.filter(aktivan=True).order_by('naziv_1')
+
+    if request.method == 'POST':
+        kalk = Kalkulacija.objects.create(
+            partner=partner,
+            godina=godina,
+            primalac=request.POST.get('primalac', ''),
+            broj_prij_lista=request.POST.get('broj_prij_lista', ''),
+            datum_prij_lista=request.POST.get('datum_prij_lista') or None,
+            dobavljac_id=request.POST.get('dobavljac') or None,
+            dokument=request.POST.get('dokument', ''),
+            datum_dokumenta=request.POST.get('datum_dokumenta') or None,
+            datum_dospijeca=request.POST.get('datum_dospijeca') or None,
+            datum_prijema=request.POST.get('datum_prijema') or None,
+            knjiga=request.POST.get('knjiga', '01'),
+            kuf=request.POST.get('kuf', ''),
+            iznos_racuna=request.POST.get('iznos_racuna') or 0,
+            iznos_pdv=request.POST.get('iznos_pdv') or 0,
+            pdv_za_odbiti=request.POST.get('pdv_za_odbiti') or 0,
+            pdv_ne_odbiti=request.POST.get('pdv_ne_odbiti') or 0,
+            kreirao=request.user,
+        )
+        return redirect('uredi_kalkulaciju', partner_id=partner_id, kalk_id=kalk.id)
+
+    return render(request, 'maloprodaja/nova_kalkulacija.html', {
+        'partner': partner,
+        'dobavljaci': dobavljaci,
+        'danas': timezone.now().date(),
+        'show_header': False,
+    })
+
+@login_required
+def uredi_kalkulaciju(request, partner_id, kalk_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    kalk = get_object_or_404(Kalkulacija, id=kalk_id, partner=partner)
+    stavke = kalk.stavke.all()
+    porezi = Porez.objects.filter(aktivan=True)  # ← dodano
+
+    return render(request, 'maloprodaja/uredi_kalkulaciju.html', {
+        'partner': partner,
+        'kalk': kalk,
+        'stavke': stavke,
+        'porezi': porezi,
+        'ukupno_nabavna': kalk.ukupno_nabavna,
+        'ukupno_mpc': kalk.ukupno_mpc,
+        'ukupno_marza': kalk.ukupno_marza,
+        'show_header': False,
+    })
+
+@login_required
+def dodaj_stavku_kalk(request, kalk_id):
+    if request.method == 'POST':
+        kalk = get_object_or_404(Kalkulacija, id=kalk_id)
+        data = json.loads(request.body)
+
+        fakturna = Decimal(str(data.get('fakturna_cijena', 0)))
+        nabavna = Decimal(str(data.get('nabavna_cijena', 0)))
+        kolicina = Decimal(str(data.get('kolicina', 1)))
+        mpc = Decimal(str(data.get('mpc', 0)))
+
+        marza_v = mpc * kolicina - nabavna * kolicina
+        marza_p = (marza_v / (nabavna * kolicina) * 100) if nabavna * kolicina > 0 else Decimal('0')
+
+        stavka = StavkaKalkulacije.objects.create(
+            kalkulacija=kalk,
+            porezna_grupa=data.get('porezna_grupa', ''),
+            naziv_artikla=data.get('naziv_artikla', ''),
+            jedinica_mjere=data.get('jedinica_mjere', ''),
+            kolicina=kolicina,
+            fakturna_cijena=fakturna,
+            nabavna_cijena=nabavna,
+            marza_postotak=marza_p.quantize(Decimal('0.01')),
+            marza_vrijednost=marza_v.quantize(Decimal('0.001')),
+            porez=data.get('porez', 'P'),
+            mpc=mpc,
+        )
+
+        return JsonResponse({
+            'success': True,
+            'stavka_id': stavka.id,
+            'porezna_grupa': stavka.porezna_grupa,
+            'naziv_artikla': stavka.naziv_artikla,
+            'jedinica_mjere': stavka.jedinica_mjere,
+            'kolicina': str(stavka.kolicina),
+            'fakturna_cijena': str(stavka.fakturna_cijena),
+            'nabavna_cijena': str(stavka.nabavna_cijena),
+            'marza_postotak': str(stavka.marza_postotak),
+            'marza_vrijednost': str(stavka.marza_vrijednost),
+            'porez': stavka.porez,
+            'mpc': str(stavka.mpc),
+            'ukupno_nabavna': str(kalk.ukupno_nabavna),
+            'ukupno_mpc': str(kalk.ukupno_mpc),
+            'ukupno_marza': str(kalk.ukupno_marza),
+            'show_header': False,
+        })
+    return JsonResponse({'success': False})
+
+@login_required
+def obrisi_stavku_kalk(request, stavka_id):
+    if request.method == 'POST':
+        stavka = get_object_or_404(StavkaKalkulacije, id=stavka_id)
+        kalk = stavka.kalkulacija
+        stavka.delete()
+        return JsonResponse({
+            'success': True,
+            'ukupno_nabavna': str(kalk.ukupno_nabavna),
+            'ukupno_mpc': str(kalk.ukupno_mpc),
+            'ukupno_marza': str(kalk.ukupno_marza),
+            'show_header': False,
+        })
+    return JsonResponse({'success': False})
+
+@login_required
+def print_kalkulacija(request, kalk_id):
+    kalk = get_object_or_404(Kalkulacija, id=kalk_id)
+    stavke = kalk.stavke.all()
+    return render(request, 'maloprodaja/print_kalkulacija.html', {
+        'kalk': kalk,
+        'stavke': stavke,
+        'partner': kalk.partner,
+        'ukupno_nabavna': kalk.ukupno_nabavna,
+        'ukupno_mpc': kalk.ukupno_mpc,
+        'ukupno_marza': kalk.ukupno_marza,
+        'show_header': False,
+    })
+
+def partneri_search_api(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 1:
+        return JsonResponse({'results': []})
+    partneri = PoslovniPartner.objects.filter(
+        aktivan=True
+    ).filter(
+        Q(naziv_1__icontains=q) | Q(sifra__icontains=q)
+    )[:10]
+    return JsonResponse({'results': [
+        {'id': p.id, 'sifra': p.sifra, 'naziv': p.naziv_1, 'mjesto': p.mjesto}
+        for p in partneri
+    ]})
+
+def artikli_search_api(request):
+    q = request.GET.get('q', '').strip()
+    if len(q) < 1:
+        return JsonResponse({'results': []})
+    artikli = Artikal.objects.filter(
+        aktivan=True
+    ).filter(
+        Q(naziv__icontains=q) | Q(sifra__icontains=q)
+    ).select_related('jedinica_mjere', 'porez', 'grupa')[:15]
+    return JsonResponse({'results': [
+        {
+            'id': a.id,
+            'sifra': a.sifra,
+            'naziv': a.naziv,
+            'jm': a.jedinica_mjere.sifra if a.jedinica_mjere else '',
+            'cijena': str(a.cijena),
+            'porez': a.porez.naziv if a.porez else 'P',
+            'grupa': a.grupa.sifra if a.grupa else '',
+        }
+        for a in artikli
+    ]})
+
+@login_required
+def zakljuci_kalkulaciju(request, kalk_id):
+    kalk = get_object_or_404(Kalkulacija, id=kalk_id)
+    partner_id = kalk.partner.id
+    if request.method == 'POST':
+        kalk.status = 'zakljucena'
+        kalk.save()
+    return redirect('nova_kalkulacija', partner_id=partner_id)
+
+
+@login_required
+def obrisi_kalkulaciju(request, pk):
+    kalk = get_object_or_404(Kalkulacija, id=pk)
+    partner_id = kalk.partner.id
+    if request.method == 'POST':
+        kalk.delete()
+    return redirect('kalkulacije', partner_id=partner_id)

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <title>Kalkulacija — {{ kalk.broj_prij_lista }} — {{ partner.naziv_1 }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11pt;
+      color: #000;
+      background: #fff;
+      padding: 14mm 16mm;
+    }
+
+    /* ── ZAGLAVLJE ── */
+    .firma-naziv { font-size: 12pt; font-weight: bold; margin-bottom: 2px; }
+    .firma-sub   { font-size: 10pt; margin-bottom: 1px; }
+    .header-divider { border: none; border-top: 1px solid #000; margin: 8px 0; }
+    .doc-info      { font-size: 10pt; margin-bottom: 2px; }
+    .doc-info-bold { font-weight: bold; }
+
+    /* ── INFO KOCKE ── */
+    .info-grid {
+      display: flex;
+      flex-wrap: wrap;
+      border: 1px solid #000;
+    }
+
+    .info-box {
+      flex: 0 0 calc(100% / 3);
+      padding: 5px 10px;
+      border-right: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    .info-box:nth-child(3n)   { border-right: none; }
+    .info-box:nth-last-child(-n+3) { border-bottom: none; }
+
+    .info-label {
+      font-size: 7.5pt;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 9.5pt;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ── PDV KOCKE ── */
+    .info-grid-4 {
+      display: flex;
+      border: 1px solid #000;
+      border-top: none;
+    }
+
+    .info-grid-4 .info-box {
+      flex: 1;
+      border-right: 1px solid #ccc;
+      border-bottom: none;
+      padding: 5px 10px;
+    }
+
+    .info-grid-4 .info-box:last-child { border-right: none; }
+
+    /* ── TABELA ── */
+    .promet-header {
+      text-align: right;
+      font-size: 9pt;
+      letter-spacing: 0.08em;
+      margin-bottom: 2px;
+    }
+
+    .table-header {
+      display: flex;
+      border-bottom: 1px dashed #000;
+      padding-bottom: 3px;
+      margin-bottom: 3px;
+      font-size: 9pt;
+    }
+
+    .col-pg     { width: 70px; }
+    .col-naziv  { flex: 1; }
+    .col-jm     { width: 50px; }
+    .col-kol    { width: 80px; text-align: right; }
+    .col-fc     { width: 88px; text-align: right; }
+    .col-nc     { width: 88px; text-align: right; }
+    .col-marzap { width: 68px; text-align: right; }
+    .col-marzav { width: 88px; text-align: right; }
+    .col-pdv    { width: 42px; text-align: center; }
+    .col-mpc    { width: 90px; text-align: right; }
+
+    .table-body { margin-bottom: 6px; }
+
+    .table-row {
+      display: flex;
+      font-size: 9pt;
+      padding: 2px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .table-row:last-child { border-bottom: none; }
+
+    /* ── TOTALI ── */
+    .totals-divider { border: none; border-top: 1px solid #000; margin: 6px 0 4px; }
+
+    .totals-row {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 9.5pt;
+      margin-bottom: 2px;
+    }
+
+    .t-label { min-width: 220px; text-align: right; padding-right: 12px; }
+    .t-val   { min-width: 100px; text-align: right; font-weight: bold; }
+
+    /* ── SALDO LINIJA ── */
+    .saldo-line {
+      display: flex;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      padding: 4px 0;
+      margin-top: 4px;
+      font-size: 9.5pt;
+      font-weight: bold;
+    }
+
+    .saldo-naziv { flex: 1; }
+    .saldo-item  { min-width: 140px; text-align: right; }
+
+    /* ── FOOTER ── */
+    .print-footer {
+      margin-top: 20px;
+      border-top: 1px solid #000;
+      padding-top: 5px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
+    }
+
+    @media print {
+      body { padding: 8mm 10mm; }
+      .no-print { display: none !important; }
+      @page { margin: 10mm; size: A4 landscape; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PRINT DUGME -->
+  <div class="no-print" style="margin-bottom:16px; display:flex; gap:10px;">
+    <button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;font-family:monospace;">
+      🖨 Štampaj
+    </button>
+    <button onclick="window.close()" style="background:#eee;color:#333;border:1px solid #ccc;padding:10px 20px;font-size:13px;border-radius:4px;cursor:pointer;font-family:monospace;">
+      ✕ Zatvori
+    </button>
+  </div>
+
+  <!-- ZAGLAVLJE FIRME -->
+  <div class="firma-naziv">{{ partner.naziv_1 }}</div>
+  {% if partner.naziv_2 %}<div class="firma-sub">{{ partner.naziv_2 }}</div>{% endif %}
+  <div class="firma-sub">{{ partner.ptt }} {{ partner.mjesto }}</div>
+  {% if partner.ulica %}<div class="firma-sub">{{ partner.ulica }}</div>{% endif %}
+  {% if partner.telefon %}<div class="firma-sub">Tel: {{ partner.telefon }}</div>{% endif %}
+
+  <hr class="header-divider">
+
+  <div class="doc-info">Strana : 1</div>
+  <div class="doc-info">Dana : {% now "d.m.Y" %}</div>
+  <div class="doc-info doc-info-bold">KALKULACIJA</div>
+
+  <hr class="header-divider">
+
+  <!-- ZAGLAVLJE KALKULACIJE U KOCKAMA -->
+  <div class="info-grid">
+    <div class="info-box">
+      <div class="info-label">Br. prijemnog lista</div>
+      <div class="info-value">{{ kalk.broj_prij_lista|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Datum prij. lista</div>
+      <div class="info-value">{{ kalk.datum_prij_lista|date:"d.m.Y"|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Dobavljač</div>
+      <div class="info-value">{{ kalk.dobavljac.naziv_1|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Dokument</div>
+      <div class="info-value">{{ kalk.dokument|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Datum dokumenta</div>
+      <div class="info-value">{{ kalk.datum_dokumenta|date:"d.m.Y"|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Datum dospijeća</div>
+      <div class="info-value">{{ kalk.datum_dospijeca|date:"d.m.Y"|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Datum prijema</div>
+      <div class="info-value">{{ kalk.datum_prijema|date:"d.m.Y"|default:"—" }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Knjiga</div>
+      <div class="info-value">{{ kalk.knjiga }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">KUF</div>
+      <div class="info-value">{{ kalk.kuf|default:"—" }}</div>
+    </div>
+  </div>
+
+  <!-- PDV U KOCKAMA -->
+  <div class="info-grid-4">
+    <div class="info-box">
+      <div class="info-label">Iznos računa</div>
+      <div class="info-value">{{ kalk.iznos_racuna|floatformat:3 }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Iznos PDV-a</div>
+      <div class="info-value">{{ kalk.iznos_pdv|floatformat:3 }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">PDV za odbiti</div>
+      <div class="info-value">{{ kalk.pdv_za_odbiti|floatformat:3 }}</div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">PDV ne odbiti</div>
+      <div class="info-value">{{ kalk.pdv_ne_odbiti|floatformat:3 }}</div>
+    </div>
+  </div>
+
+  <hr class="header-divider">
+
+  <!-- PROMET HEADER -->
+  <div class="promet-header">P &nbsp; O &nbsp; S &nbsp; T &nbsp; O &nbsp; T &nbsp; A &nbsp; K &nbsp;&nbsp;&nbsp;&nbsp; V &nbsp; R &nbsp; I &nbsp; J &nbsp; E &nbsp; D &nbsp; N &nbsp; O &nbsp; S &nbsp; T</div>
+
+  <!-- TABELA HEADER -->
+  <div class="table-header">
+    <div class="col-pg">Por.grupa</div>
+    <div class="col-naziv">Naziv artikla</div>
+    <div class="col-jm">JM</div>
+    <div class="col-kol">Količina</div>
+    <div class="col-fc">Fakt.cj.</div>
+    <div class="col-nc">Nab.cj.</div>
+    <div class="col-marzap">Marža %</div>
+    <div class="col-marzav">Marža vr.</div>
+    <div class="col-pdv">PDV</div>
+    <div class="col-mpc">MPC</div>
+  </div>
+
+  <!-- STAVKE -->
+  <div class="table-body">
+    {% for s in stavke %}
+    <div class="table-row">
+      <div class="col-pg">{{ s.porezna_grupa|default:"—" }}</div>
+      <div class="col-naziv">{{ s.naziv_artikla }}</div>
+      <div class="col-jm">{{ s.jedinica_mjere }}</div>
+      <div class="col-kol">{{ s.kolicina|floatformat:3 }}</div>
+      <div class="col-fc">{{ s.fakturna_cijena|floatformat:3 }}</div>
+      <div class="col-nc">{{ s.nabavna_cijena|floatformat:3 }}</div>
+      <div class="col-marzap">{{ s.marza_postotak|floatformat:2 }}</div>
+      <div class="col-marzav">{{ s.marza_vrijednost|floatformat:3 }}</div>
+      <div class="col-pdv">{{ s.porez }}</div>
+      <div class="col-mpc">{{ s.mpc|floatformat:3 }}</div>
+    </div>
+    {% empty %}
+    <div style="padding:10px 0; color:#888; font-size:9pt;">Nema stavki.</div>
+    {% endfor %}
+  </div>
+
+  <!-- TOTALI -->
+  <hr class="totals-divider">
+
+  <div class="totals-row">
+    <span class="t-label">Ukupno nabavna vrijednost :</span>
+    <span class="t-val">{{ ukupno_nabavna|floatformat:3 }}</span>
+  </div>
+  <div class="totals-row">
+    <span class="t-label">Ukupno marža :</span>
+    <span class="t-val">{{ ukupno_marza|floatformat:3 }}</span>
+  </div>
+
+  <hr class="totals-divider">
+
+  <!-- SALDO FINALNA LINIJA -->
+  <div class="saldo-line">
+    <div class="saldo-naziv">{{ partner.naziv_1 }}</div>
+    <div class="saldo-item">NAB: {{ ukupno_nabavna|floatformat:3 }}</div>
+    <div class="saldo-item">MARŽA: {{ ukupno_marza|floatformat:3 }}</div>
+    <div class="saldo-item">MPC: {{ ukupno_mpc|floatformat:3 }}</div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="print-footer">
+    <span>MNM LOGIC — Sistem za upravljanje poslovanjem</span>
+    <span>Štampano: {% now "d.m.Y H:i" %}</span>
+  </div>
+
+</body>
+</html>

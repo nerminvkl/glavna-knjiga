@@ -1,0 +1,238 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+<div class="portal">
+  <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+          <a href="{% url 'home' %}">Početna</a> ›
+          <a href="{% url 'glavna_knjiga' partner.id %}">{{ partner.naziv_1 }}</a> ›
+          <a href="{% url 'kalkulacije' partner.id %}">Kalkulacije</a> › Nova
+        </div>
+        <div class="up-title">Nova kalkulacija</div>
+      </div>
+      <div class="up-firm-badge">
+        <span class="up-firm-sifra">{{ partner.sifra }}</span>
+        <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
+      </div>
+    </div>
+
+    <div class="kalk-form-card">
+      <div class="kalk-form-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        KALKULACIJA — Zaglavlje
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="kalk-grid">
+
+            <div class="kalk-field" style="position:relative;">
+                <label>PRIMALAC</label>
+                <input type="text" id="primalac-search" name="primalac"
+                  placeholder="Unesite naziv ili šifru..."
+                  autocomplete="off" oninput="searchPartner('primalac', this.value)">
+                <div id="primalac-dropdown" class="kalk-dropdown" style="display:none;"></div>
+              </div>
+
+          <div class="kalk-field">
+            <label>BROJ PRIJEMNOG LISTA</label>
+            <input type="text" name="broj_prij_lista" placeholder="Broj...">
+          </div>
+
+          <div class="kalk-field">
+            <label>DATUM PRIJ. LISTA</label>
+            <input type="date" name="datum_prij_lista" value="{{ danas|date:'Y-m-d' }}">
+          </div>
+
+          <div class="kalk-field" style="position:relative;">
+            <label>DOBAVLJAČ</label>
+            <input type="text" id="dobavljac-search"
+              placeholder="Unesite naziv ili šifru..."
+              autocomplete="off" oninput="searchPartner('dobavljac', this.value)"
+              value="{% if kalk.dobavljac %}{{ kalk.dobavljac.sifra }} — {{ kalk.dobavljac.naziv_1 }}{% endif %}">
+            <div id="dobavljac-dropdown" class="kalk-dropdown" style="display:none;"></div>
+            <input type="hidden" name="dobavljac" id="dobavljac-id">
+          </div>
+
+          <div class="kalk-field">
+            <label>DOKUMENT</label>
+            <input type="text" name="dokument" placeholder="Broj dokumenta...">
+          </div>
+
+          <div class="kalk-field">
+            <label>DATUM DOKUMENTA</label>
+            <input type="date" name="datum_dokumenta" value="{{ danas|date:'Y-m-d' }}">
+          </div>
+
+          <div class="kalk-field">
+            <label>DATUM DOSPIJEĆA</label>
+            <input type="date" name="datum_dospijeca">
+          </div>
+
+          <div class="kalk-field">
+            <label>DATUM PRIJEMA</label>
+            <input type="date" name="datum_prijema" value="{{ danas|date:'Y-m-d' }}">
+          </div>
+
+          <div class="kalk-field kalk-field-sm">
+            <label>KNJIGA</label>
+            <input type="text" name="knjiga" value="01" maxlength="10">
+          </div>
+
+          <div class="kalk-field">
+            <label>KUF</label>
+            <input type="text" name="kuf" placeholder="KUF broj...">
+          </div>
+
+        </div>
+
+        <div class="kalk-divider"></div>
+        <div class="kalk-section-title">PDV PODACI</div>
+
+        <div class="kalk-grid kalk-grid-4">
+          <div class="kalk-field">
+            <label>IZNOS RAČUNA</label>
+            <input type="number" name="iznos_racuna" value="0.000" step="0.001" min="0" id="iznos_racuna">
+          </div>
+          <div class="kalk-field">
+            <label>IZNOS PDV-a</label>
+            <input type="number" name="iznos_pdv" value="0.000" step="0.001" min="0" id="iznos_pdv">
+          </div>
+          <div class="kalk-field">
+            <label>PDV ZA ODBITI</label>
+            <input type="number" name="pdv_za_odbiti" value="0.000" step="0.001" min="0">
+          </div>
+          <div class="kalk-field">
+            <label>PDV NE ODBITI</label>
+            <input type="number" name="pdv_ne_odbiti" value="0.000" step="0.001" min="0">
+          </div>
+        </div>
+
+        <div class="kalk-actions">
+          <button type="submit" class="btn-primary">Nastavi → Unos stavki</button>
+          <a href="{% url 'kalkulacije' partner.id %}" class="btn-ghost">Odustani</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.kalk-dropdown {
+  position: fixed;
+  background: #1e3a5f;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  z-index: 99999;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.kalk-dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.kalk-dropdown-item:hover { background: rgba(255,255,255,0.08); }
+.kalk-dd-sifra { color: #60a5fa; font-weight: 700; font-family: monospace; font-size: 12px; min-width: 55px; }
+.kalk-dd-naziv { color: #fff; font-size: 13px; flex: 1; }
+.kalk-dd-meta { color: rgba(255,255,255,0.35); font-size: 11px; }
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; }
+.up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
+.up-breadcrumb a:hover { color:#fff; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.up-firm-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); padding:8px 16px; border-radius:10px; }
+.up-firm-sifra { color:#60a5fa; font-size:12px; font-weight:700; font-family:monospace; }
+.up-firm-naziv { color:#fff; font-size:13px; font-weight:500; }
+
+.kalk-form-card { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:24px 28px; }
+.kalk-form-title { color:rgba(255,255,255,0.5); font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+.kalk-section-title { color:rgba(255,255,255,0.4); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:14px; }
+.kalk-divider { height:1px; background:rgba(255,255,255,0.08); margin:20px 0; }
+
+.kalk-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px; margin-bottom:0; }
+.kalk-grid-4 { grid-template-columns:repeat(4, 1fr); }
+
+.kalk-field { display:flex; flex-direction:column; gap:6px; }
+.kalk-field label { color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.kalk-field input, .kalk-field select {
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+  border-radius:9px; color:#fff; font-family:'Inter',sans-serif;
+  font-size:14px; padding:10px 13px; outline:none; transition:border-color 0.2s;
+  box-sizing:border-box; width:100%; appearance:none;
+}
+.kalk-field input:focus, .kalk-field select:focus { border-color:rgba(96,165,250,0.5); }
+.kalk-field input::placeholder { color:rgba(255,255,255,0.2); }
+.kalk-field select option { background:#1e3a5f; }
+
+.kalk-actions { display:flex; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08); }
+.btn-primary { background:#2563eb; color:#fff; border:none; border-radius:10px; padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; transition:background 0.2s; }
+.btn-primary:hover { background:#1d4ed8; }
+.btn-ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 20px; font-size:14px; text-decoration:none; }
+</style>
+
+<script>
+let partnerTimer = null;
+
+function searchPartner(tip, val) {
+  clearTimeout(partnerTimer);
+  const dropdown = document.getElementById(`${tip}-dropdown`);
+  const input = document.getElementById(`${tip}-search`);
+
+  if (val.length < 1) { dropdown.style.display = 'none'; return; }
+
+  partnerTimer = setTimeout(() => {
+    fetch(`/api/partneri/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.innerHTML = data.results.length === 0
+          ? '<div style="padding:12px;color:rgba(255,255,255,0.4);text-align:center;">Nema rezultata</div>'
+          : data.results.map(p => `
+              <div class="kalk-dropdown-item" onclick="odaberiPartnera('${tip}', ${p.id}, '${p.sifra}', '${p.naziv.replace(/'/g,"\\'")}')">
+                <span class="kalk-dd-sifra">${p.sifra}</span>
+                <span class="kalk-dd-naziv">${p.naziv}</span>
+                <span class="kalk-dd-meta">${p.mjesto}</span>
+              </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
+function odaberiPartnera(tip, id, sifra, naziv) {
+  document.getElementById(`${tip}-search`).value = `${sifra} — ${naziv}`;
+  document.getElementById(`${tip}-dropdown`).style.display = 'none';
+  // Za dobavljač čuvamo ID u hidden field
+  const hiddenField = document.getElementById(`${tip}-id`);
+  if (hiddenField) hiddenField.value = id;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('[id$="-search"]') && !e.target.closest('.kalk-dropdown')) {
+    document.querySelectorAll('.kalk-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+</script>
+{% endblock %}

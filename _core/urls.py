@@ -67,6 +67,18 @@ urlpatterns = [
     path('konto/search/', konto_search, name='konto_search'),
     path('glavna-knjiga/<int:partner_id>/kartica/', kartica_view, name='kartica'),
     path('knjizenje/kartica/<int:partner_id>/<int:konto_id>/print/', kartica_print, name='kartica_print'),
+
+    # Kalkulacije
+    path('glavna-knjiga/<int:partner_id>/kalkulacije/', kalkulacije_view, name='kalkulacije'),
+    path('glavna-knjiga/<int:partner_id>/kalkulacije/nova/', nova_kalkulacija, name='nova_kalkulacija'),
+    path('glavna-knjiga/<int:partner_id>/kalkulacije/<int:kalk_id>/', uredi_kalkulaciju, name='uredi_kalkulaciju'),
+    path('kalkulacija/<int:kalk_id>/dodaj-stavku/', dodaj_stavku_kalk, name='dodaj_stavku_kalk'),
+    path('kalkulacija/stavka/<int:stavka_id>/obrisi/', obrisi_stavku_kalk, name='obrisi_stavku_kalk'),
+    path('kalkulacija/<int:kalk_id>/print/', print_kalkulacija, name='print_kalkulacija'),
+    path('api/partneri/search/', partneri_search_api, name='partneri_search_api'),
+    path('api/artikli/search/', artikli_search_api, name='artikli_search_api'),
+    path('kalkulacija/<int:pk>/obrisi/', obrisi_kalkulaciju, name='obrisi_kalkulaciju'),
+    path('kalkulacija/<int:kalk_id>/zakljuci/', zakljuci_kalkulaciju, name='zakljuci_kalkulaciju'),
 ]
 
 if settings.DEBUG:
