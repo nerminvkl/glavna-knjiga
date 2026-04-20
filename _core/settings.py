@@ -54,9 +54,12 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'django_browser_reload',
     'django_htmx',
 ]
+
+if DEBUG:
+    INSTALLED_APPS += ['django_browser_reload']
+    MIDDLEWARE += ['django_browser_reload.middleware.BrowserReloadMiddleware']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
