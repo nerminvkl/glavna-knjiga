@@ -1,13 +1,6 @@
-cat > entrypoint.sh << 'EOF'
 #!/bin/bash
 set -e
 echo "Running migrations..."
 python manage.py migrate --noinput
 echo "Starting Gunicorn..."
 exec gunicorn _core.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120
-EOF
-
-chmod +x entrypoint.sh
-git add entrypoint.sh Dockerfile
-git commit -m "fix: add entrypoint.sh"
-git push
