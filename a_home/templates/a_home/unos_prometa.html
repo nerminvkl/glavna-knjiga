@@ -9,7 +9,6 @@
 
   <div class="up-page">
 
-    <!-- HEADER -->
     <div class="up-header">
       <div class="up-header-left">
         <div class="up-breadcrumb">
@@ -52,118 +51,123 @@
       </div>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div class="up-content">
+<!-- INPUT ROW -->
+<div class="up-input-card">
+  <div class="up-input-row">
 
-      <!-- INPUT ROW -->
-      <div class="up-input-card">
-        <div class="up-input-row">
-          <div class="up-field">
-            <label>KONTO</label>
-            <input type="text" id="konto-search" placeholder="Broj ili naziv konta..." autocomplete="off" oninput="searchKonto(this.value)">
-            <div id="konto-dropdown" class="konto-dropdown" style="display:none;"></div>
-            <input type="hidden" id="konto-id">
-            <div id="konto-selected" class="konto-selected" style="display:none;"></div>
-          </div>
-          <div class="up-field up-field-sm">
-            <label>DATUM</label>
-            <input type="date" id="stavka-datum" value="{{ knjizenje.datum|date:'Y-m-d' }}">
-          </div>
-          <div class="up-field up-field-lg">
-            <label>OPIS</label>
-            <input type="text" id="stavka-opis" placeholder="Opis stavke...">
-          </div>
-          <div class="up-field up-field-sm">
-            <label>DUGUJE</label>
-            <input type="number" id="stavka-duguje" placeholder="0.00" step="0.01" min="0" oninput="clearOther('potrazuje')">
-          </div>
-          <div class="up-field up-field-sm">
-            <label>POTRAŽUJE</label>
-            <input type="number" id="stavka-potrazuje" placeholder="0.00" step="0.01" min="0" oninput="clearOther('duguje')">
-          </div>
-          <div class="up-field up-field-btn">
-            <label>&nbsp;</label>
-            <button class="up-add-btn" onclick="dodajStavku()">Dodaj</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TABLE -->
-      <div class="up-table-card">
-        <div class="up-table-head">
-          <div class="up-th" style="width:120px;">KONTO</div>
-          <div class="up-th" style="width:100px;">DATUM</div>
-          <div class="up-th" style="flex:1;">OPIS</div>
-          <div class="up-th up-th-num">DUGUJE</div>
-          <div class="up-th up-th-num">POTRAŽUJE</div>
-          <div class="up-th" style="width:50px;"></div>
-        </div>
-
-        <div id="stavke-lista">
-          {% for stavka in stavke %}
-          <div class="up-row" id="stavka-{{ stavka.id }}">
-            <div class="up-td" style="width:120px;">
-              <span class="up-konto-badge">{{ stavka.konto.broj }}</span>
-            </div>
-            <div class="up-td up-td-date" style="width:100px;">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
-            <div class="up-td up-td-opis" style="flex:1;">
-              <div class="up-opis-main">{{ stavka.opis|default:stavka.konto.naziv }}</div>
-              <div class="up-opis-sub">{{ stavka.konto.naziv }}</div>
-            </div>
-            <div class="up-td up-td-num">
-              {% if stavka.duguje %}
-              <span class="up-amount up-amount-d">{{ stavka.duguje|floatformat:2 }}</span>
-              {% else %}—{% endif %}
-            </div>
-            <div class="up-td up-td-num">
-              {% if stavka.potrazuje %}
-              <span class="up-amount up-amount-p">{{ stavka.potrazuje|floatformat:2 }}</span>
-              {% else %}—{% endif %}
-            </div>
-            <div class="up-td up-td-action">
-              <button class="up-del-btn" onclick="obrisiStavku({{ stavka.id }})">×</button>
-            </div>
-          </div>
-          {% empty %}
-          <div class="up-empty" id="up-empty">Nema unesenih stavki. Unesite konto, opis i iznos iznad.</div>
-          {% endfor %}
-        </div>
-
-        <!-- FOOTER TOTALS -->
-        <div class="up-table-footer">
-          <div class="up-footer-spacer"></div>
-          <div class="up-footer-totals">
-            <div class="up-total-row">
-              <span class="up-total-label">Ukupno duguje:</span>
-              <span class="up-total-val up-total-d" id="ukupno-duguje">{{ ukupno_duguje|floatformat:2 }}</span>
-            </div>
-            <div class="up-total-row">
-              <span class="up-total-label">Ukupno potražuje:</span>
-              <span class="up-total-val up-total-p" id="ukupno-potrazuje">{{ ukupno_potrazuje|floatformat:2 }}</span>
-            </div>
-            <div class="up-razlika" id="razlika-wrap">
-              <span class="up-razlika-label">═══ RAZLIKA U KNJIŽENJU</span>
-              <span class="up-razlika-val" id="razlika">{{ razlika|floatformat:2 }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div class="up-field up-field-datum">
+      <label>DATUM</label>
+      <input type="text" id="stavka-datum" placeholder="21.04.2026"
+        autocomplete="off"
+        onkeydown="nextField(event, 'konto-search')">
     </div>
+
+    <div class="up-field up-field-konto">
+      <label>KONTO</label>
+      <input type="text" id="konto-search" placeholder="Broj ili naziv..."
+        autocomplete="off"
+        oninput="searchKonto(this.value)"
+        onkeydown="handleKontoKey(event)">
+      <div id="konto-dropdown" class="konto-dropdown" style="display:none;"></div>
+      <input type="hidden" id="konto-id">
+      <div id="konto-selected" class="konto-selected" style="display:none;"></div>
+    </div>
+
+    <div class="up-field up-field-opis">
+      <label>OPIS</label>
+      <input type="text" id="stavka-opis" placeholder="Opis stavke..."
+        onkeydown="nextField(event, 'stavka-duguje')">
+    </div>
+
+    <div class="up-field up-field-iznos">
+      <label>DUGUJE</label>
+      <input type="number" id="stavka-duguje" placeholder="0.00" step="0.01" min="0"
+        oninput="clearOther('potrazuje')"
+        onkeydown="handleIznosKey(event, 'duguje')">
+    </div>
+
+    <div class="up-field up-field-iznos">
+      <label>POTRAŽUJE</label>
+      <input type="number" id="stavka-potrazuje" placeholder="0.00" step="0.01" min="0"
+        oninput="clearOther('duguje')"
+        onkeydown="handleIznosKey(event, 'potrazuje')">
+    </div>
+
+    <div class="up-field up-field-btn">
+      <label>&nbsp;</label>
+      <button class="up-add-btn" onclick="dodajStavku()">Dodaj</button>
+    </div>
+
   </div>
 </div>
 
-<!-- NOVI NALOG MODAL -->
+    <!-- TABLE -->
+    <div class="up-table-card">
+      <div class="up-table-head">
+        <div class="up-th" style="width:110px;">KONTO</div>
+        <div class="up-th" style="width:95px;">DATUM</div>
+        <div class="up-th" style="flex:1;">OPIS</div>
+        <div class="up-th up-th-iznos">DUGUJE</div>
+        <div class="up-th up-th-iznos">POTRAŽUJE</div>
+        <div class="up-th" style="width:40px;"></div>
+      </div>
+
+      <div id="stavke-lista">
+        {% for stavka in stavke %}
+        <div class="up-row" id="stavka-{{ stavka.id }}">
+          <div class="up-td" style="width:110px;"><span class="up-konto-badge">{{ stavka.konto.broj }}</span></div>
+          <div class="up-td up-td-date" style="width:95px;">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
+          <div class="up-td up-td-opis" style="flex:1;">
+            <div class="up-opis-main">{{ stavka.opis|default:stavka.konto.naziv }}</div>
+            <div class="up-opis-sub">{{ stavka.konto.naziv }}</div>
+          </div>
+          <div class="up-td up-td-iznos">
+            {% if stavka.duguje %}<span class="up-amount up-amount-d">{{ stavka.duguje|floatformat:2 }}</span>{% else %}<span class="up-amount-zero">—</span>{% endif %}
+          </div>
+          <div class="up-td up-td-iznos">
+            {% if stavka.potrazuje %}<span class="up-amount up-amount-p">{{ stavka.potrazuje|floatformat:2 }}</span>{% else %}<span class="up-amount-zero">—</span>{% endif %}
+          </div>
+          <div class="up-td" style="width:40px;text-align:center;">
+            <button class="up-del-btn" onclick="obrisiStavku({{ stavka.id }})">×</button>
+          </div>
+        </div>
+        {% empty %}
+        <div class="up-empty" id="up-empty">Nema unesenih stavki.</div>
+        {% endfor %}
+      </div>
+
+      <div class="up-table-footer">
+        <div class="up-footer-totals">
+          <div class="up-total-row">
+            <span class="up-total-label">Ukupno duguje:</span>
+            <span class="up-total-val up-total-d" id="ukupno-duguje">{{ ukupno_duguje|floatformat:2 }}</span>
+          </div>
+          <div class="up-total-row">
+            <span class="up-total-label">Ukupno potražuje:</span>
+            <span class="up-total-val up-total-p" id="ukupno-potrazuje">{{ ukupno_potrazuje|floatformat:2 }}</span>
+          </div>
+          <div class="up-razlika">
+            <span class="up-razlika-label">═══ RAZLIKA U KNJIŽENJU</span>
+            <span class="up-razlika-val {% if razlika == 0 %}zero{% endif %}" id="razlika">{{ razlika|floatformat:2 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
 <div class="up-modal" id="novi-nalog-modal">
   <div class="up-modal-box">
     <div class="up-modal-title">Novo knjiženje</div>
     <form method="post" action="{% url 'novo_knjizenje' partner.id %}">
       {% csrf_token %}
-      <div class="up-field">
+      <div class="up-field" style="margin-bottom:12px;">
         <label>OPIS KNJIŽENJA</label>
         <input type="text" name="opis" placeholder="Npr. Plaćanje dobavljača...">
       </div>
-      <div class="up-field">
+      <div class="up-field" style="margin-bottom:12px;">
         <label>BROJ DOKUMENTA</label>
         <input type="text" name="dokument_broj" placeholder="Npr. RN.108-1234">
       </div>
@@ -176,480 +180,95 @@
 </div>
 
 <style>
-.up-page {
-  position: relative;
-  z-index: 10;
-  min-height: 100vh;
-  padding: 90px 32px 40px;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.up-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.up-breadcrumb {
-  color: rgba(255,255,255,0.3);
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.up-breadcrumb a {
-  color: rgba(255,255,255,0.4);
-  text-decoration: none;
-}
-
-.up-breadcrumb a:hover { color: #fff; }
-
-.up-title {
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.up-firm-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 8px 16px;
-  border-radius: 10px;
-}
-
-.up-firm-sifra {
-  color: #60a5fa;
-  font-size: 12px;
-  font-weight: 700;
-  font-family: monospace;
-}
-
-.up-firm-naziv {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.up-firm-year {
-  background: rgba(96,165,250,0.15);
-  border: 1px solid rgba(96,165,250,0.3);
-  color: #93c5fd;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-/* NALOG BAR */
-.up-nalog-bar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px;
-  padding: 0 4px;
-  overflow: hidden;
-}
-
-.up-nalog-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 14px 24px;
-  border-right: 1px solid rgba(255,255,255,0.07);
-}
-
-.up-nalog-label {
-  color: rgba(255,255,255,0.3);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.up-nalog-value {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: monospace;
-}
-
-.up-nalog-actions {
-  margin-left: auto;
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.up-btn-new {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  padding: 9px 20px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.up-btn-new:hover { background: #1d4ed8; }
-
-/* INPUT CARD */
-.up-input-card {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px;
-  padding: 16px 20px;
-}
-
-.up-input-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-
-.up-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  min-width: 120px;
-  position: relative;
-}
-
-.up-field-sm { flex: 0 0 130px; }
-.up-field-lg { flex: 2; }
-.up-field-btn { flex: 0 0 80px; }
-
-.up-field label {
-  color: rgba(255,255,255,0.35);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.up-field input {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 9px;
-  color: #fff;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  padding: 10px 13px;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.up-field input:focus {
-  border-color: rgba(96,165,250,0.5);
-}
-
-.up-field input::placeholder {
-  color: rgba(255,255,255,0.2);
-}
-
-.up-add-btn {
-  width: 100%;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 9px;
-  padding: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.up-btn-print {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 9px 20px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: 8px;
-}
-
-.up-btn-print:hover {
-  background: rgba(255,255,255,0.14);
-  color: #fff;
-}
-
-.up-add-btn:hover { background: #1d4ed8; }
-
-/* KONTO DROPDOWN */
-.konto-dropdown {
-  position: fixed;
-  background: #1e3a5f;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  z-index: 99999;
-  max-height: 220px;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-}
-
-.konto-item {
-  padding: 10px 14px;
-  cursor: pointer;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  transition: background 0.15s;
-}
-
-.konto-item:hover { background: rgba(255,255,255,0.08); }
-
-.konto-item-broj {
-  color: #60a5fa;
-  font-weight: 700;
-  font-family: monospace;
-  font-size: 13px;
-  min-width: 60px;
-}
-
-.konto-item-naziv {
-  color: #fff;
-  font-size: 13px;
-}
-
-.konto-selected {
-  margin-top: 6px;
-  background: rgba(96,165,250,0.12);
-  border: 1px solid rgba(96,165,250,0.25);
-  border-radius: 7px;
-  padding: 6px 10px;
-  color: #93c5fd;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* TABLE */
-.up-table-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 14px;
-  overflow: hidden;
-  flex: 1;
-}
-
-.up-table-head {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  gap: 8px;
-}
-
-.up-th {
-  color: rgba(255,255,255,0.3);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.up-th-num {
-  width: 130px;
-  text-align: right;
-}
-
-#stavke-lista {
-  max-height: calc(100vh - 480px);
-  overflow-y: auto;
-}
-
-.up-row {
-  display: flex;
-  align-items: center;
-  padding: 11px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  gap: 8px;
-  transition: background 0.15s;
-  animation: rowIn 0.2s ease;
-}
-
-@keyframes rowIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.up-row:hover { background: rgba(255,255,255,0.04); }
-
-.up-td { color: rgba(255,255,255,0.75); font-size: 13px; }
-.up-td-date { color: rgba(255,255,255,0.4); font-size: 12px; }
-.up-td-num { width: 130px; text-align: right; }
-
-.up-td-opis { display: flex; flex-direction: column; gap: 2px; }
-.up-opis-main { color: #fff; font-size: 13px; }
-.up-opis-sub { color: rgba(255,255,255,0.3); font-size: 11px; }
-
-.up-konto-badge {
-  background: rgba(96,165,250,0.12);
-  border: 1px solid rgba(96,165,250,0.2);
-  color: #93c5fd;
-  font-family: monospace;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 6px;
-}
-
-.up-amount { font-weight: 600; font-family: monospace; font-size: 13px; }
-.up-amount-d { color: #60a5fa; }
-.up-amount-p { color: #34d399; }
-
-.up-del-btn {
-  width: 26px;
-  height: 26px;
-  background: rgba(220,38,38,0.1);
-  border: 1px solid rgba(220,38,38,0.2);
-  color: #fca5a5;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-  padding: 0;
-}
-
-.up-del-btn:hover { background: rgba(220,38,38,0.25); }
-
-.up-td-action { width: 50px; display: flex; justify-content: center; }
-
-.up-empty {
-  text-align: center;
-  color: rgba(255,255,255,0.2);
-  font-size: 13px;
-  padding: 40px 20px;
-}
-
-/* FOOTER TOTALS */
-.up-table-footer {
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 14px 16px;
-  display: flex;
-  justify-content: flex-end;
-  background: rgba(255,255,255,0.03);
-}
-
-.up-footer-totals {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 340px;
-}
-
-.up-total-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.up-total-label {
-  color: rgba(255,255,255,0.4);
-  font-size: 12px;
-}
-
-.up-total-val {
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.up-total-d { color: #60a5fa; }
-.up-total-p { color: #34d399; }
-
-.up-razlika {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-
-.up-razlika-label {
-  color: rgba(255,255,255,0.5);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  font-family: monospace;
-}
-
-.up-razlika-val {
-  font-family: monospace;
-  font-size: 16px;
-  font-weight: 800;
-  color: #fbbf24;
-}
-
-.up-razlika-val.zero { color: #34d399; }
-
-/* MODAL */
-.up-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  z-index: 99999;
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.up-modal.open { display: flex; }
-
-.up-modal-box {
-  background: #0f2236;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 20px;
-  padding: 32px;
-  width: 100%;
-  max-width: 440px;
-}
-
-.up-modal-title {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-
-.up-modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.up-btn-cancel {
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 9px 20px;
-  border-radius: 9px;
-  font-size: 13px;
-  cursor: pointer;
-}
+.up-field-datum { flex:0 0 110px; }
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; }
+.up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
+.up-breadcrumb a:hover { color:#fff; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.up-firm-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); padding:8px 16px; border-radius:10px; }
+.up-firm-sifra { color:#60a5fa; font-size:12px; font-weight:700; font-family:monospace; }
+.up-firm-naziv { color:#fff; font-size:13px; font-weight:500; }
+.up-firm-year { background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.3); color:#93c5fd; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+
+.up-nalog-bar { display:flex; align-items:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:0 4px; overflow:hidden; }
+.up-nalog-item { display:flex; flex-direction:column; gap:3px; padding:14px 24px; border-right:1px solid rgba(255,255,255,0.07); }
+.up-nalog-label { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.up-nalog-value { color:#fff; font-size:15px; font-weight:600; font-family:monospace; }
+.up-nalog-actions { margin-left:auto; padding:10px 16px; display:flex; align-items:center; gap:8px; }
+
+.up-btn-new { background:#2563eb; color:#fff; border:none; padding:9px 20px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.2s; }
+.up-btn-new:hover { background:#1d4ed8; }
+.up-btn-print { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 20px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; }
+.up-btn-print:hover { background:rgba(255,255,255,0.14); color:#fff; }
+
+.up-input-card { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px 20px; }
+.up-input-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+
+.up-field { display:flex; flex-direction:column; gap:6px; position:relative; }
+.up-field-konto { flex:0 0 180px; }
+.up-field-opis { flex:2; min-width:160px; }
+.up-field-iznos { flex:0 0 120px; }
+.up-field-btn { flex:0 0 70px; }
+
+.up-field label { color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.up-field input { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:9px; color:#fff; font-family:'Inter',sans-serif; font-size:13px; padding:9px 12px; outline:none; transition:border-color 0.2s; width:100%; box-sizing:border-box; }
+.up-field input:focus { border-color:rgba(96,165,250,0.5); }
+.up-field input::placeholder { color:rgba(255,255,255,0.2); }
+.up-add-btn { width:100%; background:#2563eb; color:#fff; border:none; border-radius:9px; padding:10px; font-size:13px; font-weight:600; cursor:pointer; }
+.up-add-btn:hover { background:#1d4ed8; }
+
+.konto-dropdown { position:fixed; background:#1e3a5f; border:1px solid rgba(255,255,255,0.2); border-radius:10px; z-index:99999; max-height:220px; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+.konto-item { padding:10px 14px; cursor:pointer; display:flex; gap:10px; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; }
+.konto-item:hover, .konto-item.active { background:rgba(255,255,255,0.08); }
+.konto-item-broj { color:#60a5fa; font-weight:700; font-family:monospace; font-size:13px; min-width:60px; }
+.konto-item-naziv { color:#fff; font-size:13px; }
+.konto-selected { margin-top:6px; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.25); border-radius:7px; padding:6px 10px; color:#93c5fd; font-size:11px; }
+
+.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; overflow:hidden; }
+.up-table-head { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px; }
+.up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
+.up-th-iznos { width:120px; text-align:right; }
+
+.up-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s; animation:rowIn 0.2s ease; }
+@keyframes rowIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.up-row:hover { background:rgba(255,255,255,0.04); }
+.up-td { color:rgba(255,255,255,0.75); font-size:13px; }
+.up-td-date { color:rgba(255,255,255,0.4); font-size:12px; }
+.up-td-iznos { width:120px; text-align:right; font-family:monospace; }
+.up-td-opis { display:flex; flex-direction:column; gap:2px; }
+.up-opis-main { color:#fff; font-size:13px; }
+.up-opis-sub { color:rgba(255,255,255,0.3); font-size:11px; }
+
+.up-konto-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.up-amount { font-weight:700; font-family:monospace; font-size:13px; }
+.up-amount-d { color:#60a5fa; }
+.up-amount-p { color:#34d399; }
+.up-amount-zero { color:rgba(255,255,255,0.2); font-family:monospace; }
+
+.up-del-btn { width:24px; height:24px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.2); color:#fca5a5; border-radius:5px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; padding:0; }
+.up-del-btn:hover { background:rgba(220,38,38,0.25); }
+.up-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:40px 20px; }
+
+.up-table-footer { border-top:1px solid rgba(255,255,255,0.08); padding:14px 16px; display:flex; justify-content:flex-end; background:rgba(255,255,255,0.03); }
+.up-footer-totals { display:flex; flex-direction:column; gap:6px; min-width:300px; }
+.up-total-row { display:flex; justify-content:space-between; align-items:center; }
+.up-total-label { color:rgba(255,255,255,0.4); font-size:12px; }
+.up-total-val { font-family:monospace; font-size:14px; font-weight:700; }
+.up-total-d { color:#60a5fa; }
+.up-total-p { color:#34d399; }
+.up-razlika { display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); }
+.up-razlika-label { color:rgba(255,255,255,0.5); font-size:11px; font-weight:600; font-family:monospace; }
+.up-razlika-val { font-family:monospace; font-size:16px; font-weight:800; color:#fbbf24; }
+.up-razlika-val.zero { color:#34d399; }
+
+.up-modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); z-index:99999; display:none; align-items:center; justify-content:center; }
+.up-modal.open { display:flex; }
+.up-modal-box { background:#0f2236; border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:32px; width:100%; max-width:440px; }
+.up-modal-title { color:#fff; font-size:18px; font-weight:700; margin-bottom:20px; }
+.up-modal-actions { display:flex; gap:10px; margin-top:20px; }
+.up-btn-cancel { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.12); padding:9px 20px; border-radius:9px; font-size:13px; cursor:pointer; }
 </style>
 
 <script>
@@ -657,17 +276,52 @@ const knjizenieId = {{ knjizenje.id }};
 const csrfToken = '{{ csrf_token }}';
 const konta = [
   {% for k in konta %}
-  { id: {{ k.id }}, broj: "{{ k.broj }}", naziv: "{{ k.naziv }}" },
+  { id: {{ k.id }}, broj: "{{ k.broj }}", naziv: "{{ k.naziv|escapejs }}" },
   {% endfor %}
 ];
 
-// KONTO SEARCH
+// ── Navigacija ───────────────────────────────────
+function nextField(e, nextId) {
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    const next = document.getElementById(nextId);
+    if (next) { next.focus(); if (next.type === 'number') next.select(); }
+  }
+}
+
+function handleIznosKey(e, tip) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = parseFloat(e.target.value) || 0;
+    if (val > 0) {
+      dodajStavku();
+    } else {
+      // Ako nema vrijednosti, idi na drugi iznos
+      const drugi = tip === 'duguje' ? 'stavka-potrazuje' : 'stavka-duguje';
+      const el = document.getElementById(drugi);
+      el.focus(); el.select();
+    }
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (tip === 'duguje') {
+      const el = document.getElementById('stavka-potrazuje');
+      el.focus(); el.select();
+    } else {
+      dodajStavku();
+    }
+  }
+}
+
+// ── Konto search ─────────────────────────────────
 let selectedKonto = null;
+let filteredKonta = [];
+let activeKontoIndex = 0;
 
 function searchKonto(val) {
   const dropdown = document.getElementById('konto-dropdown');
   const input = document.getElementById('konto-search');
-  
+
   if (val.length < 1) {
     dropdown.style.display = 'none';
     selectedKonto = null;
@@ -676,26 +330,79 @@ function searchKonto(val) {
     return;
   }
 
-  const filtered = konta.filter(k =>
+  filteredKonta = konta.filter(k =>
     k.broj.startsWith(val) || k.naziv.toLowerCase().includes(val.toLowerCase())
   ).slice(0, 15);
+
+  activeKontoIndex = 0;
+
+  if (filteredKonta.length === 0) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  // Auto-odaberi ako jedan
+  if (filteredKonta.length === 1) {
+    odaberiKonto(filteredKonta[0].id, filteredKonta[0].broj, filteredKonta[0].naziv);
+    return;
+  }
 
   const rect = input.getBoundingClientRect();
   dropdown.style.top = (rect.bottom + 4) + 'px';
   dropdown.style.left = rect.left + 'px';
   dropdown.style.width = rect.width + 'px';
-
-  if (filtered.length === 0) {
-    dropdown.innerHTML = '<div style="padding:12px;color:rgba(255,255,255,0.4);font-size:13px;text-align:center;">Nema rezultata</div>';
-  } else {
-    dropdown.innerHTML = filtered.map(k => `
-      <div class="konto-item" onclick="odaberiKonto(${k.id}, '${k.broj}', '${k.naziv.replace(/'/g, "\\'")}')">
-        <span class="konto-item-broj">${k.broj}</span>
-        <span class="konto-item-naziv">${k.naziv}</span>
-      </div>
-    `).join('');
-  }
+  dropdown.innerHTML = filteredKonta.map((k, i) => `
+    <div class="konto-item ${i === 0 ? 'active' : ''}" id="konto-item-${i}"
+         onclick="odaberiKonto(${k.id}, '${k.broj}', '${k.naziv.replace(/'/g,"\\'")}')">
+      <span class="konto-item-broj">${k.broj}</span>
+      <span class="konto-item-naziv">${k.naziv}</span>
+    </div>`).join('');
   dropdown.style.display = 'block';
+}
+
+function handleKontoKey(e) {
+  const dropdown = document.getElementById('konto-dropdown');
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (dropdown.style.display === 'block' && filteredKonta.length > 0) {
+      const k = filteredKonta[activeKontoIndex];
+      odaberiKonto(k.id, k.broj, k.naziv);
+    } else if (selectedKonto) {
+      document.getElementById('stavka-opis').focus();
+    }
+    return;
+  }
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (activeKontoIndex < filteredKonta.length - 1) {
+      document.getElementById(`konto-item-${activeKontoIndex}`)?.classList.remove('active');
+      activeKontoIndex++;
+      document.getElementById(`konto-item-${activeKontoIndex}`)?.classList.add('active');
+    }
+    return;
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (activeKontoIndex > 0) {
+      document.getElementById(`konto-item-${activeKontoIndex}`)?.classList.remove('active');
+      activeKontoIndex--;
+      document.getElementById(`konto-item-${activeKontoIndex}`)?.classList.add('active');
+    }
+    return;
+  }
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (filteredKonta.length > 0 && !selectedKonto) {
+      const k = filteredKonta[activeKontoIndex];
+      odaberiKonto(k.id, k.broj, k.naziv);
+    } else {
+      document.getElementById('stavka-opis').focus();
+    }
+  }
 }
 
 function odaberiKonto(id, broj, naziv) {
@@ -706,62 +413,57 @@ function odaberiKonto(id, broj, naziv) {
   const sel = document.getElementById('konto-selected');
   sel.textContent = naziv;
   sel.style.display = 'block';
+  filteredKonta = [];
+  activeKontoIndex = 0;
+  // Fokus na opis
+  document.getElementById('stavka-opis').focus();
 }
 
 function clearOther(field) {
-  if (field === 'duguje' && document.getElementById('stavka-potrazuje').value) {
-    document.getElementById('stavka-duguje').value = '';
-  } else if (field === 'potrazuje' && document.getElementById('stavka-duguje').value) {
-    document.getElementById('stavka-potrazuje').value = '';
-  }
+  if (field === 'duguje') document.getElementById('stavka-duguje').value = '';
+  if (field === 'potrazuje') document.getElementById('stavka-potrazuje').value = '';
 }
 
-// DODAJ STAVKU
+// ── Dodaj stavku ─────────────────────────────────
 function dodajStavku() {
   const kontoId = document.getElementById('konto-id').value;
   const opis = document.getElementById('stavka-opis').value;
   const duguje = document.getElementById('stavka-duguje').value || 0;
   const potrazuje = document.getElementById('stavka-potrazuje').value || 0;
 
-  if (!kontoId) { alert('Odaberite konto!'); return; }
-  if (!duguje && !potrazuje) { alert('Unesite duguje ili potražuje!'); return; }
+  if (!kontoId) { alert('Odaberite konto!'); document.getElementById('konto-search').focus(); return; }
+  if (!duguje && !potrazuje) { alert('Unesite duguje ili potražuje!'); document.getElementById('stavka-duguje').focus(); return; }
 
   fetch(`/knjizenje/${knjizenieId}/dodaj-stavku/`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken,
-    },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
     body: JSON.stringify({ konto_id: kontoId, opis, duguje, potrazuje })
   })
   .then(r => r.json())
   .then(data => {
     if (data.success) {
-      // Ukloni empty state
       document.getElementById('up-empty')?.remove();
-
-      // Dodaj novi red
       const lista = document.getElementById('stavke-lista');
       const row = document.createElement('div');
       row.className = 'up-row';
       row.id = `stavka-${data.stavka_id}`;
+      const d = parseFloat(data.duguje);
+      const p = parseFloat(data.potrazuje);
       row.innerHTML = `
-        <div class="up-td" style="width:120px;"><span class="up-konto-badge">${data.konto_broj}</span></div>
-        <div class="up-td up-td-date" style="width:100px;">${new Date().toLocaleDateString('bs-BA')}</div>
+        <div class="up-td" style="width:110px;"><span class="up-konto-badge">${data.konto_broj}</span></div>
+        <div class="up-td up-td-date" style="width:95px;">${new Date().toLocaleDateString('bs-BA')}</div>
         <div class="up-td up-td-opis" style="flex:1;">
           <div class="up-opis-main">${data.opis || data.konto_naziv}</div>
           <div class="up-opis-sub">${data.konto_naziv}</div>
         </div>
-        <div class="up-td up-td-num">${parseFloat(data.duguje) > 0 ? `<span class="up-amount up-amount-d">${parseFloat(data.duguje).toFixed(2)}</span>` : '—'}</div>
-        <div class="up-td up-td-num">${parseFloat(data.potrazuje) > 0 ? `<span class="up-amount up-amount-p">${parseFloat(data.potrazuje).toFixed(2)}</span>` : '—'}</div>
-        <div class="up-td up-td-action"><button class="up-del-btn" onclick="obrisiStavku(${data.stavka_id})">×</button></div>
+        <div class="up-td up-td-iznos">${d > 0 ? `<span class="up-amount up-amount-d">${d.toFixed(2)}</span>` : '<span class="up-amount-zero">—</span>'}</div>
+        <div class="up-td up-td-iznos">${p > 0 ? `<span class="up-amount up-amount-p">${p.toFixed(2)}</span>` : '<span class="up-amount-zero">—</span>'}</div>
+        <div class="up-td" style="width:40px;text-align:center;"><button class="up-del-btn" onclick="obrisiStavku(${data.stavka_id})">×</button></div>
       `;
       lista.appendChild(row);
-
-      // Update totals
       updateTotals(data.ukupno_duguje, data.ukupno_potrazuje, data.razlika);
 
-      // Reset forma
+      // Reset i fokus na konto
       document.getElementById('konto-search').value = '';
       document.getElementById('konto-id').value = '';
       document.getElementById('konto-selected').style.display = 'none';
@@ -770,14 +472,14 @@ function dodajStavku() {
       document.getElementById('stavka-potrazuje').value = '';
       selectedKonto = null;
 
-      // Update broj stavki
       const bs = document.getElementById('broj-stavki');
       bs.textContent = parseInt(bs.textContent) + 1;
+
+      document.getElementById('konto-search').focus();
     }
   });
 }
 
-// OBRISI STAVKU
 function obrisiStavku(stavkaId) {
   if (!confirm('Obrisati stavku?')) return;
   fetch(`/stavka/${stavkaId}/obrisi/`, {
@@ -801,29 +503,41 @@ function obrisiStavku(stavkaId) {
 function updateTotals(duguje, potrazuje, razlika) {
   document.getElementById('ukupno-duguje').textContent = parseFloat(duguje).toFixed(2);
   document.getElementById('ukupno-potrazuje').textContent = parseFloat(potrazuje).toFixed(2);
-  const razlikaEl = document.getElementById('razlika');
-  razlikaEl.textContent = parseFloat(razlika).toFixed(2);
-  razlikaEl.className = 'up-razlika-val' + (parseFloat(razlika) === 0 ? ' zero' : '');
+  const el = document.getElementById('razlika');
+  el.textContent = parseFloat(razlika).toFixed(2);
+  el.className = 'up-razlika-val' + (parseFloat(razlika) === 0 ? ' zero' : '');
 }
 
-// Zatvori dropdown
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.up-field')) {
+document.addEventListener('click', e => {
+  if (!e.target.closest('#konto-search') && !e.target.closest('#konto-dropdown')) {
     document.getElementById('konto-dropdown').style.display = 'none';
   }
 });
 
-function updateTime() {
-  const now = new Date();
-  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-}
-setInterval(updateTime, 1000);
-updateTime();
-
 function stampajNalog() {
   window.open(`/knjizenje/${knjizenieId}/print/`, '_blank');
 }
+
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime, 1000); updateTime();
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('konto-search').focus();
+});
+document.addEventListener('DOMContentLoaded', () => {
+  flatpickr('#stavka-datum', {
+    dateFormat: 'd.m.Y',
+    defaultDate: '{{ knjizenje.datum|date:"d.m.Y" }}',
+    allowInput: true,
+    onClose: () => document.getElementById('konto-search').focus()
+  });
+  document.getElementById('konto-search').focus();
+});
 </script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 {% endblock %}
