@@ -15,6 +15,25 @@ def home_view(request):
     return render(request, 'a_home/home.html', {'partneri': partneri,
      'show_header': False,
      })
+    
+def get_selected_godina(request):
+    godina_id = request.session.get('selected_year')
+
+    if not godina_id:
+        godina = PoslovnaGodina.objects.filter(aktivna=True).first()
+        if not godina:
+            return None
+        request.session['selected_year'] = godina.godina
+        return godina
+
+    godina = PoslovnaGodina.objects.filter(godina=godina_id).first()
+
+    if not godina:
+        godina = PoslovnaGodina.objects.filter(aktivna=True).first()
+        if godina:
+            request.session['selected_year'] = godina.godina
+
+    return godina
 
 def partneri_search(request):
     q = request.GET.get('q', '').strip()
@@ -264,24 +283,28 @@ def glavna_knjiga_view(request, partner_id):
     )
 
 @login_required
-def unos_prometa(request, partner_id, knjizenje_id=None):  # ← dodano knjizenje_id=None
+def unos_prometa(request, partner_id, knjizenje_id=None):
     partner = get_object_or_404(PoslovniPartner, id=partner_id, aktivan=True)
-    godina_id = request.session.get('selected_year')
-    godina = get_object_or_404(PoslovnaGodina, godina=godina_id)
-    
+
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
     glavna_knjiga, _ = GlavnaKnjiga.objects.get_or_create(
         partner=partner, godina=godina
     )
-    
-    # Ako je proslijeđen knjizenje_id, dohvati to knjiženje
+
     if knjizenje_id:
-        knjizenje = get_object_or_404(Knjizenje, id=knjizenje_id, glavna_knjiga=glavna_knjiga)
+        knjizenje = get_object_or_404(
+            Knjizenje,
+            id=knjizenje_id,
+            glavna_knjiga=glavna_knjiga
+        )
     else:
-        # Dohvati zadnje ili kreiraj novo
         knjizenje = Knjizenje.objects.filter(
             glavna_knjiga=glavna_knjiga
         ).order_by('-kreirano').first()
-        
+
         if not knjizenje:
             knjizenje = Knjizenje.objects.create(
                 glavna_knjiga=glavna_knjiga,
@@ -290,10 +313,10 @@ def unos_prometa(request, partner_id, knjizenje_id=None):  # ← dodano knjizenj
                 opis='',
                 kreirao=request.user
             )
-    
+
     stavke = knjizenje.stavke.select_related('konto').all()
     konta = Konto.objects.filter(aktivan=True).order_by('broj')
-    
+
     return render(request, 'a_home/unos_prometa.html', {
         'partner': partner,
         'knjizenje': knjizenje,
