@@ -602,9 +602,16 @@ import json
 @login_required
 def kalkulacije_view(request, partner_id):
     partner = get_object_or_404(PoslovniPartner, id=partner_id)
-    godina_id = request.session.get('selected_year')
-    godina = get_object_or_404(PoslovnaGodina, godina=godina_id)
-    lista = Kalkulacija.objects.filter(partner=partner, godina=godina).order_by('-kreirano')
+
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    lista = Kalkulacija.objects.filter(
+        partner=partner,
+        godina=godina
+    ).order_by('-kreirano')
+
     return render(request, 'maloprodaja/kalkulacije.html', {
         'partner': partner,
         'lista': lista,
@@ -616,7 +623,9 @@ def kalkulacije_view(request, partner_id):
 def nova_kalkulacija(request, partner_id):
     partner = get_object_or_404(PoslovniPartner, id=partner_id)
     godina_id = request.session.get('selected_year')
-    godina = get_object_or_404(PoslovnaGodina, godina=godina_id)
+    godina = get_selected_godina(request)
+      if not godina:
+        return redirect('login')
     dobavljaci = PoslovniPartner.objects.filter(aktivan=True).order_by('naziv_1')
 
     if request.method == 'POST':
