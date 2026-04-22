@@ -10,11 +10,13 @@ from datetime import date
 import json
 from django.contrib.auth import logout
 from django.contrib.auth import logout as auth_logout
+import os
+from django.conf import settings as django_settings
 
 from .models import (
     PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -218,14 +220,33 @@ def artikli_search_api(request):
 
 # ── GLAVNA KNJIGA ─────────────────────────────────────────────────────────────
 
+@login_required
 def glavna_knjiga_view(request, partner_id):
     partner = get_object_or_404(PoslovniPartner, id=partner_id, aktivan=True)
     request.session['aktivni_partner_id'] = partner_id
     request.session['aktivni_partner_naziv'] = partner.naziv_1
     godina = get_selected_godina(request)
+
+    # Wallpapers
+    import os
+    from django.conf import settings as django_settings
+    wallpapers = []
+    try:
+        for static_dir in django_settings.STATICFILES_DIRS:
+            wp_dir = os.path.join(static_dir, 'images', 'wallpapers')
+            if os.path.exists(wp_dir):
+                wallpapers = sorted([
+                    f for f in os.listdir(wp_dir)
+                    if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))
+                ])
+                break
+    except:
+        pass
+
     return render(request, 'a_home/dashboard.html', {
         'partner': partner,
         'godina': godina,
+        'wallpapers': wallpapers,
         'show_header': False,
     })
 
@@ -785,3 +806,25 @@ def zakljuci_inventuru(request, inventura_id):
         except ValueError as e:
             messages.error(request, str(e))
     return redirect('pregled_inventure', inventura_id=inventura_id)
+
+# ── PROMJENA POZADINE ────────────────────────────────────────────────
+
+@login_required
+def promijeni_pozadinu(request):
+    if request.method == 'POST':
+        pozadina = request.POST.get('pozadina')
+        if pozadina:
+            postavke, _ = KorisnickePostavke.objects.get_or_create(korisnik=request.user)
+            postavke.pozadina = pozadina
+            postavke.save()
+        return JsonResponse({'success': True, 'pozadina': pozadina})
+    return JsonResponse({'success': False})
+
+def get_pozadina(request):
+    """Helper — vraća trenutnu pozadinu za usera."""
+    if request.user.is_authenticated:
+        try:
+            return request.user.postavke.pozadina
+        except:
+            pass
+    return 'pozadina.png'

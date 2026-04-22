@@ -3,7 +3,7 @@
 {% block content %} 
 
 <div class="portal">
-    <img src="/static/images/pozadina.png" class="bg-img" alt="bg">
+  <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
     <div class="overlay"></div>
 
     <div class="topbar">
@@ -21,6 +21,7 @@
         <a href="{% url 'godine' %}" class="nav-btn {% if request.resolver_match.url_name == 'godine' %}active{% endif %}">Poslovna godina</a>
         <a href="{% url 'partneri' %}" class="nav-btn {% if request.resolver_match.url_name == 'partneri' %}active{% endif %}">Partneri</a>
         <a href="{% url 'artikli' %}" class="nav-btn {% if request.resolver_match.url_name == 'artikli' %}active{% endif %}">Artikli</a>
+        <a href="#" class="nav-btn" onclick="event.preventDefault(); document.getElementById('wallpaper-modal').classList.add('open')">Pozadina</a>
         <a href="{% url 'account_logout' %}" class="nav-btn {% if request.resolver_match.url_name == 'account_logout' %}active{% endif %}">Odjavi se</a>
       </nav>
     
@@ -72,6 +73,351 @@
     </div>
   </div>
 
+  <!-- WALLPAPER MODAL -->
+<div class="wallpaper-modal" id="wallpaper-modal">
+  <div class="wallpaper-modal-box">
+    <div class="wallpaper-modal-header">
+      <div class="wallpaper-modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Odaberite pozadinu
+      </div>
+      <button class="wallpaper-close-x" onclick="document.getElementById('wallpaper-modal').classList.remove('open')">×</button>
+    </div>
+  
+    <div class="wallpaper-grid">
+      {% for wp in wallpapers %}
+      <div class="wallpaper-item {% if bg_pozadina == wp %}active{% endif %}"
+           onclick="odaberiPozadinu('{{ wp }}', this)">
+        <img src="/static/images/wallpapers/{{ wp }}" alt="{{ wp }}">
+        <div class="wallpaper-name">{{ wp|cut:'.jpg'|cut:'.jpeg'|cut:'.png'|cut:'.webp' }}</div>
+        {% if bg_pozadina == wp %}
+        <div class="wallpaper-check">✓</div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <div style="color:rgba(255,255,255,0.3); font-size:13px; text-align:center; padding:20px; grid-column:1/-1;">
+        Nema slika u folderu static/images/wallpapers/
+      </div>
+      {% endfor %}
+    </div>
+  
+    <button class="wallpaper-close-btn" onclick="document.getElementById('wallpaper-modal').classList.remove('open')">Zatvori</button>
+  </div>
+  </div>
+  <style>
+    /* MOBILE NAV FIX */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 14px 20px !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+  }
+
+  .topbar-nav {
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 8px !important;
+    gap: 2px !important;
+    display: none !important;
+    border-radius: 16px !important;
+    background: rgba(10,20,40,0.92) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    z-index: 99 !important;
+  }
+
+  .topbar-nav.open {
+    display: flex !important;
+  }
+
+  .nav-btn {
+    text-align: center !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    border-radius: 10px !important;
+    width: 100% !important;
+  }
+
+  .topbar-time {
+    display: none !important;
+  }
+}
+    /* TOPBAR TRANSPARENT + NAV GLASS */
+.topbar {
+  position: fixed !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  justify-content: space-between !important;
+  padding: 16px 40px !important;
+}
+
+.topbar-brand { flex-shrink: 0 !important; }
+.topbar-time { flex-shrink: 0 !important; text-align: right !important; }
+
+.topbar-nav {
+  flex: 1 !important;
+  margin: 0 32px !important;
+  max-width: 800px !important;
+  background: rgba(255,255,255,0.07) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 16px !important;
+  padding: 5px !important;
+  gap: 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 768px) {
+  .topbar-nav {
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 8px !important;
+    gap: 2px !important;
+    border-radius: 16px !important;
+    background: rgba(10,20,40,0.95) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    z-index: 999 !important;
+    /* Sakrij po defaultu */
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(-10px) !important;
+    transition: all 0.2s ease !important;
+    /* NE koristimo display:none jer .open ne može ga override-ati */
+    display: flex !important;
+  }
+
+  .topbar-nav.open {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: all !important;
+    transform: translateY(0) !important;
+  }
+}
+
+.nav-btn {
+  color: rgba(255,255,255,0.55) !important;
+  padding: 8px 20px !important;
+  border-radius: 11px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  border: none !important;
+  transition: background 0.2s, color 0.2s !important;
+  white-space: nowrap !important;
+}
+
+.nav-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: #fff !important;
+}
+
+.nav-btn.active {
+  background: rgba(255,255,255,0.14) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+    .nav-btn-wallpaper {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    }
+    
+    .wallpaper-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(12px);
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    }
+    .wallpaper-modal.open { display: flex; }
+    
+    .wallpaper-modal-box {
+    background: #0d1f35;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 24px;
+    width: 640px;
+    max-width: 95vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    }
+    
+    .wallpaper-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    }
+    
+    .wallpaper-modal-title {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    }
+    
+    .wallpaper-close-x {
+    width: 30px; height: 30px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.5);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    }
+    .wallpaper-close-x:hover { background: rgba(255,255,255,0.14); color: #fff; }
+    
+    .wallpaper-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    }
+    
+    .wallpaper-item {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+    }
+    .wallpaper-item:hover { border-color: rgba(96,165,250,0.5); transform: scale(1.02); }
+    .wallpaper-item.active { border-color: #3b82f6; }
+    
+    .wallpaper-item img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+    }
+    
+    .wallpaper-name {
+    background: rgba(0,0,0,0.6);
+    color: rgba(255,255,255,0.65);
+    font-size: 11px;
+    padding: 5px 8px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    text-transform: capitalize;
+    }
+    
+    .wallpaper-check {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: #3b82f6;
+    color: #fff;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    }
+    
+    .wallpaper-close-btn {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.55);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+    }
+    .wallpaper-close-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    
+    .nav-btn-wallpaper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.65);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      transition: background 0.2s, color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .nav-btn-wallpaper:hover {
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+    }
+    
+    .nav-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.12);
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+    
+    .nav-wp-btn {
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .nav-wp-btn:hover {
+      background: rgba(255,255,255,0.13);
+      color: #fff;
+      border-color: rgba(255,255,255,0.22);
+    }
+    </style>
   <script>
     function updateTime() {
       const now = new Date();
@@ -132,6 +478,40 @@
         document.getElementById('search-dropdown').style.display = 'none';
       }
     });
+    function odaberiPozadinu(naziv, el) {
+fetch('/postavke/pozadina/', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'X-CSRFToken': '{{ csrf_token }}'
+  },
+  body: `pozadina=${naziv}`
+})
+.then(r => r.json())
+.then(d => {
+  if (d.success) {
+    // Promijeni pozadinu odmah
+    document.querySelectorAll('.bg-img').forEach(img => {
+      img.src = `/static/images/wallpapers/${d.pozadina}`;
+    });
+    // Označi aktivnu
+    document.querySelectorAll('.wallpaper-item').forEach(item => {
+      item.classList.remove('active');
+      item.querySelector('.wallpaper-check')?.remove();
+    });
+    el.classList.add('active');
+    const check = document.createElement('div');
+    check.className = 'wallpaper-check';
+    check.textContent = '✓';
+    el.appendChild(check);
+  }
+});
+}
+
+// Zatvori klikom van modala
+document.getElementById('wallpaper-modal').addEventListener('click', function(e) {
+if (e.target === this) this.classList.remove('open');
+});
   </script>
   <script src="{% static 'js/navbar.js' %}"></script>
 

@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('logout/', logout_view, name='logout'),
     path('accounts/', include('allauth.urls')),
+    path('postavke/pozadina/', promijeni_pozadinu, name='promijeni_pozadinu'),
     path('glavna-knjiga/', home_view, name="home"),
     path('glavna-knjiga/<int:partner_id>/', glavna_knjiga_view, name='glavna_knjiga'),
     path('', login_view, name="login"),

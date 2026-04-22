@@ -474,3 +474,17 @@ class StavkaKalkulacije(models.Model):
     @property
     def mpc_vrijednost(self):
         return self.mpc * self.kolicina
+
+# ─────────────────────────────────────────
+#  POZADINSKA SLIKA PROMJENA
+# ─────────────────────────────────────────
+
+class KorisnickePostavke(models.Model):
+    korisnik = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='postavke')
+    pozadina = models.CharField(max_length=100, default='pozadina.png', verbose_name="Pozadinska slika")
+
+    class Meta:
+        verbose_name = "Korisničke postavke"
+
+    def __str__(self):
+        return f"Postavke — {self.korisnik.username}"
