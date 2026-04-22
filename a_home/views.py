@@ -46,7 +46,7 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('home')
 
-    years = PoslovnaGodina.objects.filter(aktivna=True).values_list('godina', flat=True)
+    years = PoslovnaGodina.objects.filter(aktivna=True)
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -57,10 +57,15 @@ def login_view(request):
 
         if user is not None and year:
             login(request, user)
+
             request.session['selected_year'] = int(year)
+
             return redirect('home')
-        else:
-            return render(request, 'login.html', {'form': {'errors': True}, 'years': years})
+
+        return render(request, 'login.html', {
+            'form': {'errors': True},
+            'years': years
+        })
 
     return render(request, 'login.html', {
         'show_header': False,
