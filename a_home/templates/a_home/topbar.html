@@ -13,6 +13,7 @@
       <a href="{% url 'godine' %}"         class="nav-btn {% if request.resolver_match.url_name == 'godine' %}active{% endif %}">Poslovna godina</a>
       <a href="{% url 'partneri' %}"       class="nav-btn {% if request.resolver_match.url_name == 'partneri' %}active{% endif %}">Partneri</a>
       <a href="{% url 'artikli' %}"        class="nav-btn {% if request.resolver_match.url_name == 'artikli' %}active{% endif %}">Artikli</a>
+      <a href="{% url 'logout' %}"        class="nav-btn {% if request.resolver_match.url_name == 'logout' %}active{% endif %}">Odjavi se</a>
     </nav>
   
     <div class="topbar-time">

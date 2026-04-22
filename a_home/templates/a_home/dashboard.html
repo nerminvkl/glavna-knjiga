@@ -20,7 +20,9 @@
           <span class="gk-meta-dot"></span>
           <span class="gk-meta-tag">Šifra: {{ partner.sifra }}</span>
           <span class="gk-meta-dot"></span>
-          <span class="gk-meta-tag gk-meta-year">{{ request.session.selected_year }}</span>
+          <span class="gk-meta-tag gk-meta-year">
+            {{ godina.godina }}{% if godina.napomena and godina.napomena != godina.godina|stringformat:"s" %} — {{ godina.napomena }}{% endif %}
+          </span>
         </div>
       </div>
       <a href="{% url 'home' %}" class="gk-back-btn">

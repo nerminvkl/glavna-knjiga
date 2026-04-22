@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odjava — MNM LOGIC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+</head>
+<body>
+<div class="portal">
+  <img src="{% static 'images/pozadina.png' %}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+
+  <div class="topbar">
+    <div>
+      <div><span class="brand-dot"></span><span class="brand-name">GLAVNA KNJIGA</span></div>
+      <div class="brand-sub">Sistem za upravljanje poslovanjem</div>
+    </div>
+    <div>
+      <div class="dt-time" id="dt-time"></div>
+      <div class="dt-date" id="dt-date"></div>
+    </div>
+  </div>
+
+  <div class="center">
+    <div class="glass-panel">
+
+      <div class="eyebrow">
+        <div class="eyebrow-line"></div>
+        <div class="eyebrow-text">Odjava iz sistema</div>
+        <div class="eyebrow-line"></div>
+      </div>
+
+      <div class="logout-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(96,165,250,0.8)" stroke-width="1.5">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      </div>
+
+      <div class="panel-title">{{ request.user.get_full_name|default:request.user.username }}</div>
+      <div class="panel-sub">Jeste li sigurni da se želite odjaviti?</div>
+
+      <div class="logout-actions">
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="logout-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Da, odjavi me
+          </button>
+        </form>
+
+        <a href="javascript:history.back()" class="cancel-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Odustani
+        </a>
+      </div>
+
+      <div class="panel-footer">MNM LOGIC &nbsp;·&nbsp; Sistem za upravljanje poslovanjem</div>
+    </div>
+  </div>
+</div>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:#0a1628; min-height:100vh; }
+
+.portal { position:relative; min-height:100vh; display:flex; flex-direction:column; }
+.bg-img { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; opacity:0.4; }
+.overlay { position:fixed; inset:0; background:linear-gradient(135deg,rgba(10,22,40,0.92) 0%,rgba(15,34,54,0.88) 100%); z-index:1; }
+
+.topbar { position:fixed; top:0; left:0; right:0; z-index:100; display:flex; justify-content:space-between; align-items:center; padding:0 32px; height:64px; background:rgba(10,20,40,0.8); backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.08); }
+.brand-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#3b82f6; margin-right:10px; }
+.brand-name { color:#fff; font-size:15px; font-weight:700; letter-spacing:0.05em; }
+.brand-sub { color:rgba(255,255,255,0.35); font-size:11px; margin-top:2px; }
+.dt-time { color:#fff; font-size:18px; font-weight:600; font-family:monospace; text-align:right; }
+.dt-date { color:rgba(255,255,255,0.35); font-size:11px; text-align:right; margin-top:2px; }
+
+.center { position:relative; z-index:10; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:80px 20px 40px; }
+
+.glass-panel { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:40px 36px; width:100%; max-width:400px; backdrop-filter:blur(20px); }
+
+.eyebrow { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.eyebrow-line { flex:1; height:1px; background:rgba(255,255,255,0.1); }
+.eyebrow-text { color:rgba(255,255,255,0.4); font-size:11px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; white-space:nowrap; }
+
+.panel-title { color:#fff; font-size:22px; font-weight:700; text-align:center; margin-bottom:6px; }
+.panel-sub { color:rgba(255,255,255,0.4); font-size:13px; text-align:center; margin-bottom:4px; }
+.panel-footer { color:rgba(255,255,255,0.2); font-size:11px; text-align:center; margin-top:24px; }
+
+.logout-icon { display:flex; justify-content:center; margin:8px 0 20px; }
+.logout-icon svg { background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.15); border-radius:50%; padding:14px; width:48px; height:48px; }
+
+.logout-actions { display:flex; flex-direction:column; gap:10px; margin-top:28px; }
+
+.logout-btn { width:100%; background:rgba(220,38,38,0.15); border:1px solid rgba(220,38,38,0.3); color:#fca5a5; border-radius:12px; padding:14px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s; font-family:'Inter',sans-serif; }
+.logout-btn:hover { background:rgba(220,38,38,0.25); border-color:rgba(220,38,38,0.5); color:#fff; }
+
+.cancel-btn { width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.5); border-radius:12px; padding:14px; font-size:14px; font-weight:500; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s; text-decoration:none; box-sizing:border-box; }
+.cancel-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+</script>
+</body>
+</html>
