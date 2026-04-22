@@ -46,15 +46,17 @@
           <input type="password" name="password" placeholder="Unesite lozinku" autocomplete="current-password" required>
         </div>
 
-        <div class="field">
-          <label>POSLOVNA GODINA</label>
-          <select name="year" required>
-            <option value="" disabled selected>— Odaberite godinu —</option>
-            {% for year in years %}
-            <option value="{{ year }}">{{ year }}</option>
-            {% endfor %}
-          </select>
-        </div>
+<div class="field">
+  <label>POSLOVNA GODINA</label>
+  <select name="year" required>
+    <option value="" disabled selected>— Odaberite godinu —</option>
+
+    {% for year in years %}
+      <option value="{{ year.id }}">{{ year.godina }}</option>
+    {% endfor %}
+
+  </select>
+</div>
 
         <button type="submit" class="login-btn">Prijava</button>
       </form>
