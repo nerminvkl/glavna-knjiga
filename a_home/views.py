@@ -624,8 +624,10 @@ def nova_kalkulacija(request, partner_id):
     partner = get_object_or_404(PoslovniPartner, id=partner_id)
     godina_id = request.session.get('selected_year')
     godina = get_selected_godina(request)
-      if not godina:
+    
+    if not godina:
         return redirect('login')
+
     dobavljaci = PoslovniPartner.objects.filter(aktivan=True).order_by('naziv_1')
 
     if request.method == 'POST':
