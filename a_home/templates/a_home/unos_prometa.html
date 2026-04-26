@@ -73,6 +73,18 @@
       <div id="konto-selected" class="konto-selected" style="display:none;"></div>
     </div>
 
+<div class="up-field up-field-partner" id="partner-field" style="display:none; position:relative;">
+  <label>PARTNER / ANALITIKA</label>
+  <input type="text" id="partner-search" 
+    placeholder="Šifra ili naziv partnera..."
+    autocomplete="off"
+    oninput="searchPartnerUnos(this.value)"
+    onkeydown="handlePartnerKey(event)">
+  <div id="partner-dropdown-unos" class="konto-dropdown" style="display:none;"></div>
+  <input type="hidden" id="partner-id-unos">
+  <div id="partner-selected-unos" class="konto-selected" style="display:none;"></div>
+</div>
+
     <div class="up-field up-field-opis">
       <label>OPIS</label>
       <input type="text" id="stavka-opis" placeholder="Opis stavke..."
@@ -202,6 +214,11 @@
 .up-btn-new:hover { background:#1d4ed8; }
 .up-btn-print { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 20px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; }
 .up-btn-print:hover { background:rgba(255,255,255,0.14); color:#fff; }
+
+.up-field-partner {
+  flex: 1;
+  min-width: 180px;
+}
 
 .up-input-card { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px 20px; }
 .up-input-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
@@ -424,20 +441,39 @@ function clearOther(field) {
   if (field === 'potrazuje') document.getElementById('stavka-potrazuje').value = '';
 }
 
+function formatDateForServer(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('.');
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  return dateStr;
+}
+
 // ── Dodaj stavku ─────────────────────────────────
 function dodajStavku() {
   const kontoId = document.getElementById('konto-id').value;
+  const datumPrikaz = document.getElementById('stavka-datum').value;
+  const datum = formatDateForServer(datumPrikaz);
   const opis = document.getElementById('stavka-opis').value;
   const duguje = document.getElementById('stavka-duguje').value || 0;
   const potrazuje = document.getElementById('stavka-potrazuje').value || 0;
+  const partnerId = document.getElementById('partner-id-unos').value;
+  const partnerNaziv = document.getElementById('partner-search').value;
 
-  if (!kontoId) { alert('Odaberite konto!'); document.getElementById('konto-search').focus(); return; }
-  if (!duguje && !potrazuje) { alert('Unesite duguje ili potražuje!'); document.getElementById('stavka-duguje').focus(); return; }
+  if (!kontoId) { alert('Odaberite konto!'); return; }
+  if (!duguje && !potrazuje) { alert('Unesite duguje ili potražuje!'); return; }
 
   fetch(`/knjizenje/${knjizenieId}/dodaj-stavku/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-    body: JSON.stringify({ konto_id: kontoId, opis, duguje, potrazuje })
+    body: JSON.stringify({ 
+      konto_id: kontoId, 
+      datum, 
+      opis, 
+      duguje, 
+      potrazuje,
+      partner_id: partnerId || null,
+      partner_naziv: partnerNaziv,
+    })
   })
   .then(r => r.json())
   .then(data => {
@@ -449,35 +485,169 @@ function dodajStavku() {
       row.id = `stavka-${data.stavka_id}`;
       const d = parseFloat(data.duguje);
       const p = parseFloat(data.potrazuje);
+      
+      // Prikaz konta sa partnerom
+      const kontoDisplay = data.partner_naziv 
+        ? `${data.konto_broj} <span style="color:rgba(255,255,255,0.4);font-size:11px;">· ${data.partner_naziv}</span>`
+        : data.konto_broj;
+
       row.innerHTML = `
         <div class="up-td" style="width:110px;"><span class="up-konto-badge">${data.konto_broj}</span></div>
-        <div class="up-td up-td-date" style="width:95px;">${new Date().toLocaleDateString('bs-BA')}</div>
+        <div class="up-td up-td-date" style="width:95px;">${datumPrikaz}</div>
         <div class="up-td up-td-opis" style="flex:1;">
           <div class="up-opis-main">${data.opis || data.konto_naziv}</div>
-          <div class="up-opis-sub">${data.konto_naziv}</div>
+          <div class="up-opis-sub">${data.partner_naziv ? data.partner_naziv + ' · ' : ''}${data.konto_naziv}</div>
         </div>
-        <div class="up-td up-td-iznos">${d > 0 ? `<span class="up-amount up-amount-d">${d.toFixed(2)}</span>` : '<span class="up-amount-zero">—</span>'}</div>
-        <div class="up-td up-td-iznos">${p > 0 ? `<span class="up-amount up-amount-p">${p.toFixed(2)}</span>` : '<span class="up-amount-zero">—</span>'}</div>
+        <div class="up-td" style="width:240px; display:flex; justify-content:flex-end; align-items:center; gap:6px; font-family:monospace;">
+          <span style="min-width:100px; text-align:right; ${d > 0 ? 'color:#60a5fa; font-weight:700;' : 'color:rgba(255,255,255,0.2);'}">${d > 0 ? d.toFixed(2) : '—'}</span>
+          <span style="color:rgba(255,255,255,0.12); font-size:11px;">│</span>
+          <span style="min-width:100px; text-align:right; ${p > 0 ? 'color:#34d399; font-weight:700;' : 'color:rgba(255,255,255,0.2);'}">${p > 0 ? p.toFixed(2) : '—'}</span>
+        </div>
         <div class="up-td" style="width:40px;text-align:center;"><button class="up-del-btn" onclick="obrisiStavku(${data.stavka_id})">×</button></div>
       `;
       lista.appendChild(row);
       updateTotals(data.ukupno_duguje, data.ukupno_potrazuje, data.razlika);
 
-      // Reset i fokus na konto
+      // Reset
       document.getElementById('konto-search').value = '';
       document.getElementById('konto-id').value = '';
       document.getElementById('konto-selected').style.display = 'none';
+      document.getElementById('partner-search').value = '';
+      document.getElementById('partner-id-unos').value = '';
+      document.getElementById('partner-selected-unos').style.display = 'none';
+      document.getElementById('partner-field').style.display = 'none';
       document.getElementById('stavka-opis').value = '';
       document.getElementById('stavka-duguje').value = '';
       document.getElementById('stavka-potrazuje').value = '';
       selectedKonto = null;
+      selectedPartner = null;
 
       const bs = document.getElementById('broj-stavki');
       bs.textContent = parseInt(bs.textContent) + 1;
-
       document.getElementById('konto-search').focus();
     }
   });
+}
+
+let selectedPartner = null;
+let filteredPartneri = [];
+let activePartnerIndex = 0;
+let partnerTimer = null;
+
+// Prikaži partner polje kad se odabere konto
+function odaberiKonto(id, broj, naziv) {
+  selectedKonto = { id, broj, naziv };
+  document.getElementById('konto-id').value = id;
+  document.getElementById('konto-search').value = broj;
+  document.getElementById('konto-dropdown').style.display = 'none';
+  const sel = document.getElementById('konto-selected');
+  sel.textContent = naziv;
+  sel.style.display = 'block';
+  filteredKonta = [];
+  activeKontoIndex = 0;
+
+  // Prikaži partner polje
+  document.getElementById('partner-field').style.display = 'flex';
+  document.getElementById('partner-search').focus();
+}
+
+function searchPartnerUnos(val) {
+  clearTimeout(partnerTimer);
+  const dropdown = document.getElementById('partner-dropdown-unos');
+  const input = document.getElementById('partner-search');
+
+  if (val.length < 1) {
+    dropdown.style.display = 'none';
+    selectedPartner = null;
+    document.getElementById('partner-id-unos').value = '';
+    document.getElementById('partner-selected-unos').style.display = 'none';
+    return;
+  }
+
+  partnerTimer = setTimeout(() => {
+    fetch(`/api/partneri/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        filteredPartneri = data.results;
+        activePartnerIndex = 0;
+
+        if (data.results.length === 0) {
+          // Dozvoli slobodan unos — ne sakrivaj
+          dropdown.style.display = 'none';
+          return;
+        }
+
+        if (data.results.length === 1) {
+          odaberiPartnera(data.results[0].id, data.results[0].sifra, data.results[0].naziv);
+          return;
+        }
+
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.innerHTML = data.results.map((p, i) => `
+          <div class="konto-item ${i === 0 ? 'active' : ''}" id="partner-item-${i}"
+               onclick="odaberiPartnera(${p.id}, '${p.sifra}', '${p.naziv.replace(/'/g,"\\'")}')">
+            <span class="konto-item-broj">${p.sifra}</span>
+            <span class="konto-item-naziv">${p.naziv}</span>
+          </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
+function handlePartnerKey(e) {
+  const dropdown = document.getElementById('partner-dropdown-unos');
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (dropdown.style.display === 'block' && filteredPartneri.length > 0) {
+      const p = filteredPartneri[activePartnerIndex];
+      odaberiPartnera(p.id, p.sifra, p.naziv);
+    } else {
+      // Slobodan unos — idi na opis
+      document.getElementById('stavka-opis').focus();
+    }
+    return;
+  }
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    dropdown.style.display = 'none';
+    document.getElementById('stavka-opis').focus();
+  }
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (activePartnerIndex < filteredPartneri.length - 1) {
+      document.getElementById(`partner-item-${activePartnerIndex}`)?.classList.remove('active');
+      activePartnerIndex++;
+      document.getElementById(`partner-item-${activePartnerIndex}`)?.classList.add('active');
+    }
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (activePartnerIndex > 0) {
+      document.getElementById(`partner-item-${activePartnerIndex}`)?.classList.remove('active');
+      activePartnerIndex--;
+      document.getElementById(`partner-item-${activePartnerIndex}`)?.classList.add('active');
+    }
+  }
+}
+
+function odaberiPartnera(id, sifra, naziv) {
+  selectedPartner = { id, sifra, naziv };
+  document.getElementById('partner-id-unos').value = id;
+  document.getElementById('partner-search').value = `${sifra} — ${naziv}`;
+  document.getElementById('partner-dropdown-unos').style.display = 'none';
+  const sel = document.getElementById('partner-selected-unos');
+  sel.textContent = naziv;
+  sel.style.display = 'block';
+  filteredPartneri = [];
+  // Idi na opis
+  document.getElementById('stavka-opis').focus();
 }
 
 function obrisiStavku(stavkaId) {

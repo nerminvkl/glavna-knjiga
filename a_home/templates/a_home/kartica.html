@@ -55,9 +55,10 @@
         <span class="kartica-konto-naziv">{{ odabrani_konto.naziv }}</span>
         <span class="kartica-konto-tip">{{ odabrani_konto.get_tip_display }}</span>
       </div>
-      <a href="/knjizenje/kartica/{{ partner.id }}/{{ odabrani_konto.id }}/print/" target="_blank" class="kartica-print-btn">
+      <a href="{% url 'kartica_print' partner.id odabrani_konto.id %}" class="kartica-print-btn">
         🖨 Štampaj karticu
       </a>
+
     </div>
 
     <!-- TABELA -->
@@ -438,6 +439,7 @@ function updateTime() {
 }
 setInterval(updateTime, 1000);
 updateTime();
+
 </script>
 
 {% endblock %}

@@ -299,22 +299,29 @@ def dodaj_stavku(request, knjizenje_id):
 
         konto = get_object_or_404(Konto, id=data.get('konto_id'))
 
-        # Datum — prihvati sa forme ili koristi datum knjizenja
         datum_str = data.get('datum', '')
         if datum_str:
             try:
                 stavka_datum = date.fromisoformat(datum_str)
-                # Ažuriraj datum knjizenja ako je promijenjen
                 if stavka_datum != knjizenje.datum:
                     knjizenje.datum = stavka_datum
                     knjizenje.save()
             except (ValueError, TypeError):
                 pass
 
+        partner_id = data.get('partner_id')
+        partner = None
+        partner_naziv = data.get('partner_naziv', '')
+        if partner_id:
+            partner = PoslovniPartner.objects.filter(id=partner_id).first()
+
+        opis = data.get('opis', '') or (partner.naziv_1 if partner else partner_naziv)
+
         stavka = StavkaKnjizenja.objects.create(
             knjizenje=knjizenje,
             konto=konto,
-            opis=data.get('opis', ''),
+            partner=partner,
+            opis=opis,
             duguje=data.get('duguje', 0),
             potrazuje=data.get('potrazuje', 0),
         )
@@ -324,6 +331,8 @@ def dodaj_stavku(request, knjizenje_id):
             'stavka_id': stavka.id,
             'konto_broj': stavka.konto.broj,
             'konto_naziv': stavka.konto.naziv,
+            'partner_naziv': partner.naziv_1 if partner else partner_naziv,
+            'partner_sifra': partner.sifra if partner else '',
             'opis': stavka.opis,
             'duguje': str(stavka.duguje),
             'potrazuje': str(stavka.potrazuje),
@@ -403,8 +412,8 @@ def kartica_view(request, partner_id):
 
     glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
     konta = Konto.objects.filter(aktivan=True).order_by('broj')
-    stavke = None
     odabrani_konto = None
+    stavke = None
     ukupno_duguje = 0
     ukupno_potrazuje = 0
     saldo = 0
@@ -415,7 +424,7 @@ def kartica_view(request, partner_id):
         stavke = StavkaKnjizenja.objects.filter(
             knjizenje__glavna_knjiga=glavna_knjiga,
             konto=odabrani_konto
-        ).select_related('knjizenje').order_by('knjizenje__datum', 'knjizenje__id')
+        ).select_related('knjizenje', 'partner').order_by('knjizenje__datum', 'knjizenje__id')
         ukupno_duguje = sum(s.duguje for s in stavke)
         ukupno_potrazuje = sum(s.potrazuje for s in stavke)
         saldo = ukupno_duguje - ukupno_potrazuje
@@ -443,6 +452,11 @@ def kartica_print(request, partner_id, konto_id):
     glavna_knjiga = get_object_or_404(GlavnaKnjiga, partner=partner, godina=godina)
     konto = get_object_or_404(Konto, id=konto_id)
 
+    odabrani_partner_id = request.GET.get('analiticki_partner')
+    odabrani_partner = None
+    if odabrani_partner_id:
+        odabrani_partner = PoslovniPartner.objects.filter(id=odabrani_partner_id).first()
+
     stavke = StavkaKnjizenja.objects.filter(
         knjizenje__glavna_knjiga=glavna_knjiga,
         konto=konto
@@ -460,6 +474,7 @@ def kartica_print(request, partner_id, konto_id):
         'ukupno_duguje': ukupno_duguje,
         'ukupno_potrazuje': ukupno_potrazuje,
         'saldo': saldo,
+        'odabrani_partner': odabrani_partner,
     })
 
 

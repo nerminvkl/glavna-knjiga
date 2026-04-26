@@ -223,6 +223,7 @@ class Knjizenje(models.Model):
 class StavkaKnjizenja(models.Model):
     knjizenje  = models.ForeignKey(Knjizenje, on_delete=models.CASCADE, related_name='stavke', verbose_name="Knjiženje")
     konto      = models.ForeignKey(Konto, on_delete=models.PROTECT, verbose_name="Konto")
+    partner    = models.ForeignKey(PoslovniPartner, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Partner")
     opis       = models.CharField(max_length=255, blank=True, verbose_name="Opis stavke")
     duguje     = models.DecimalField(max_digits=15, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Duguje")
     potrazuje  = models.DecimalField(max_digits=15, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Potražuje")
