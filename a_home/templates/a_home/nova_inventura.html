@@ -1,0 +1,68 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+<div class="portal">
+  <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page" style="align-items:center; justify-content:center;">
+    <div style="width:100%; max-width:520px;">
+      <div class="up-breadcrumb" style="margin-bottom:12px;">
+        <a href="{% url 'inventure' partner.id %}">← Nazad na inventure</a>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:28px;">
+        <div style="color:#fff; font-size:18px; font-weight:700; margin-bottom:20px;">Nova inventura</div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <label style="color:rgba(255,255,255,0.4); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">NAZIV INVENTURE</label>
+              <input type="text" name="naziv" value="Inventura {{ godina.godina }}" required
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:10px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:14px !important; padding:10px 14px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <label style="color:rgba(255,255,255,0.4); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">DATUM INVENTURE</label>
+              <input type="date" name="datum" value="{{ today }}" required
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:10px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:14px !important; padding:10px 14px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <label style="color:rgba(255,255,255,0.4); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">NAPOMENA</label>
+              <textarea name="napomena" rows="2"
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:10px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:14px !important; padding:10px 14px !important; outline:none !important; width:100% !important; box-sizing:border-box !important; resize:vertical !important;"></textarea>
+            </div>
+            <div style="background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.2); border-radius:10px; padding:12px 16px; font-size:12px; color:rgba(255,255,255,0.6);">
+              ℹ️ Stavke će biti automatski popunjene iz zaključenih kalkulacija za {{ godina.godina }}.
+            </div>
+            <div style="display:flex; gap:10px; padding-top:4px;">
+              <button type="submit" style="background:#2563eb !important; color:#fff !important; border:none !important; border-radius:10px !important; padding:12px 28px !important; font-size:14px !important; font-weight:600 !important; cursor:pointer !important; font-family:'Inter',sans-serif !important;">
+                Kreiraj inventuru
+              </button>
+              <a href="{% url 'inventure' partner.id %}" style="background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:12px 20px; font-size:14px; text-decoration:none; display:inline-flex; align-items:center;">
+                Odustani
+              </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:13px; }
+.up-breadcrumb a:hover { color:#fff; }
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+</script>
+{% endblock %}

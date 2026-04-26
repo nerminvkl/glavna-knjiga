@@ -14,9 +14,9 @@ import os
 from django.conf import settings as django_settings
 
 from .models import (
-    PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
+    Inventura, PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -1003,3 +1003,162 @@ def obrisi_nalog(request, nalog_id):
 @login_required
 def zakljuci_nalog(request, nalog_id):
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+# --- INVENTURA
+
+from django.db.models import Sum
+
+@login_required
+def inventure_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+    inventure = Inventura.objects.filter(
+        glavna_knjiga=glavna_knjiga
+    ).order_by('-datum') if glavna_knjiga else []
+
+    return render(request, 'a_home/inventure.html', {
+        'partner': partner,
+        'godina': godina,
+        'inventure': inventure,
+        'show_header': False,
+    })
+
+
+@login_required
+def nova_inventura(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+    if not glavna_knjiga:
+        return redirect('glavna_knjiga', partner_id=partner_id)
+
+    if request.method == 'POST':
+        naziv = request.POST.get('naziv', f'Inventura {godina.godina}')
+        datum = request.POST.get('datum')
+        napomena = request.POST.get('napomena', '')
+
+        inventura = Inventura.objects.create(
+            glavna_knjiga=glavna_knjiga,
+            naziv=naziv,
+            datum=datum,
+            napomena=napomena,
+            kreirao=request.user,
+        )
+
+        # Auto-popuni stavke iz kalkulacija
+        artikli_ulaz = StavkaKalkulacije.objects.filter(
+            kalkulacija__partner=partner,
+            kalkulacija__godina=godina,
+            kalkulacija__status='zakljucena'
+        ).values('naziv_artikla').annotate(
+            ukupno_kolicina=Sum('kolicina'),
+        )
+
+        # Pokušaj matchati sa artiklom iz šifarnika
+        for ulaz in artikli_ulaz:
+            artikal = Artikal.objects.filter(naziv=ulaz['naziv_artikla']).first()
+            if artikal:
+                StavkaInventure.objects.get_or_create(
+                    inventura=inventura,
+                    artikal=artikal,
+                    defaults={
+                        'kolicina_knjig': ulaz['ukupno_kolicina'],
+                        'cijena_knjig': artikal.cijena,
+                        'kolicina_popis': 0,
+                        'cijena_popis': artikal.cijena,
+                    }
+                )
+
+        return redirect('uredi_inventuru', inventura_id=inventura.id)
+
+    today = __import__('datetime').date.today()
+    return render(request, 'a_home/nova_inventura.html', {
+        'partner': partner,
+        'godina': godina,
+        'today': today,
+        'show_header': False,
+    })
+
+
+@login_required
+def uredi_inventuru(request, inventura_id):
+    inventura = get_object_or_404(Inventura, id=inventura_id)
+    partner = inventura.glavna_knjiga.partner
+    godina = inventura.glavna_knjiga.godina
+    stavke = inventura.stavke.select_related('artikal').all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update_stavka':
+            stavka_id = request.POST.get('stavka_id')
+            stavka = get_object_or_404(StavkaInventure, id=stavka_id)
+            stavka.kolicina_knjig = request.POST.get('kolicina_knjig', stavka.kolicina_knjig)
+            stavka.cijena_knjig = request.POST.get('cijena_knjig', stavka.cijena_knjig)
+            stavka.kolicina_popis = request.POST.get('kolicina_popis', stavka.kolicina_popis)
+            stavka.cijena_popis = request.POST.get('cijena_popis', stavka.cijena_popis)
+            stavka.napomena = request.POST.get('napomena', '')
+            stavka.save()
+
+        elif action == 'dodaj_stavku':
+            artikal_id = request.POST.get('artikal_id')
+            artikal = get_object_or_404(Artikal, id=artikal_id)
+            StavkaInventure.objects.get_or_create(
+                inventura=inventura,
+                artikal=artikal,
+                defaults={
+                    'kolicina_knjig': 0,
+                    'cijena_knjig': artikal.cijena,
+                    'kolicina_popis': 0,
+                    'cijena_popis': artikal.cijena,
+                }
+            )
+
+        elif action == 'obrisi_stavku':
+            stavka_id = request.POST.get('stavka_id')
+            stavka = get_object_or_404(StavkaInventure, id=stavka_id)
+            stavka.delete()
+
+        elif action == 'zakljuci':
+            from django.utils import timezone
+            inventura.status = 'zakljucena'
+            inventura.zakljucena_u = timezone.now()
+            inventura.save()
+
+        return redirect('uredi_inventuru', inventura_id=inventura.id)
+
+    artikli = Artikal.objects.filter(aktivan=True).order_by('sifra')
+    return render(request, 'a_home/uredi_inventuru.html', {
+        'inventura': inventura,
+        'partner': partner,
+        'godina': godina,
+        'stavke': stavke,
+        'artikli': artikli,
+        'show_header': False,
+    })
+
+
+@login_required
+def obrisi_inventuru(request, inventura_id):
+    inventura = get_object_or_404(Inventura, id=inventura_id)
+    partner_id = inventura.glavna_knjiga.partner_id
+    if request.method == 'POST':
+        inventura.delete()
+    return redirect('inventure', partner_id=partner_id)
+
+
+@login_required  
+def print_inventura(request, inventura_id):
+    inventura = get_object_or_404(Inventura, id=inventura_id)
+    stavke = inventura.stavke.select_related('artikal').all()
+    return render(request, 'a_home/print_inventura.html', {
+        'inventura': inventura,
+        'partner': inventura.glavna_knjiga.partner,
+        'godina': inventura.glavna_knjiga.godina,
+        'stavke': stavke,
+    })

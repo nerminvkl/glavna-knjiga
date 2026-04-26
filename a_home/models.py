@@ -361,6 +361,14 @@ class StavkaInventure(models.Model):
         razlika = self.razlika_kolicine
         return abs(razlika * self.cijena_popis) if razlika < 0 else 0
 
+    @property
+    def vrijednost_knjig(self):
+        return self.kolicina_knjig * self.cijena_knjig
+
+    @property
+    def vrijednost_popis(self):
+        return self.kolicina_popis * self.cijena_popis
+
 class SintetickiKonto(models.Model):
     glavna_knjiga = models.ForeignKey(GlavnaKnjiga, on_delete=models.CASCADE, related_name='sinteticki_konti', verbose_name="Glavna knjiga")
     konto         = models.ForeignKey(Konto, on_delete=models.PROTECT, verbose_name="Konto")

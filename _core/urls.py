@@ -90,6 +90,13 @@ urlpatterns = [
     path('maloprodaja/porezi/', porezi_view, name='porezi'),
     path('maloprodaja/porezi/delete/<int:pk>/', porez_delete, name='porez_delete'),
     path('glavna-knjiga/<int:partner_id>/bruto-bilanca/', bruto_bilanca_view, name='bruto_bilanca'),
+
+    # inventura linkovi
+    path('glavna-knjiga/<int:partner_id>/inventure/', inventure_view, name='inventure'),
+    path('glavna-knjiga/<int:partner_id>/inventure/nova/', nova_inventura, name='nova_inventura_gk'),
+    path('inventura/<int:inventura_id>/uredi/', uredi_inventuru, name='uredi_inventuru'),
+    path('inventura/<int:inventura_id>/obrisi/', obrisi_inventuru, name='obrisi_inventuru_gk'),
+    path('inventura/<int:inventura_id>/print/', print_inventura, name='print_inventura'),
 ]
 
 if settings.DEBUG:

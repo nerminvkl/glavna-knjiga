@@ -1,0 +1,213 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+<div class="portal">
+  <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+            <a href="{% url 'inventure' partner.id %}">← Inventure</a>
+            <span style="color:rgba(255,255,255,0.3);"> › </span>
+            <span style="color:rgba(255,255,255,0.5);">{{ inventura.naziv }}</span>
+          </div>
+        <div class="up-title">{{ inventura.naziv }}</div>
+        <div style="color:rgba(255,255,255,0.4); font-size:13px; margin-top:4px;">
+          {{ inventura.datum|date:"d.m.Y" }}
+          {% if inventura.status == 'zakljucena' %}
+          <span class="badge-inactive" style="margin-left:8px;">Zaključena</span>
+          {% else %}
+          <span class="badge-active" style="margin-left:8px;">Otvorena</span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <a href="{% url 'print_inventura' inventura.id %}" target="_blank" class="btn-print-lg">🖨 Štampaj</a>
+        {% if inventura.status != 'zakljucena' %}
+        <form method="post" onsubmit="return confirm('Zaključiti inventuru? Nakon toga ne možete mijenjati stavke.')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="zakljuci">
+          <button type="submit" class="btn-zakljuci">Zaključi inventuru</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if inventura.status != 'zakljucena' %}
+    <div class="inv-add-bar">
+      <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="dodaj_stavku">
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1; min-width:200px;">
+          <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em;">ARTIKAL</label>
+          <select name="artikal_id" required
+            style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+            <option value="">— Odaberi artikal —</option>
+            {% for a in artikli %}
+            <option value="{{ a.id }}">{{ a.sifra }} — {{ a.naziv }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit"
+          style="background:#2563eb !important; color:#fff !important; border:none !important; border-radius:9px !important; padding:10px 20px !important; font-size:13px !important; font-weight:600 !important; cursor:pointer !important; font-family:'Inter',sans-serif !important; white-space:nowrap !important;">
+          + Dodaj artikal
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="up-table-wrap">
+      <div class="up-table-card">
+        <div class="up-table-head">
+          <div class="up-th" style="width:100px;">ŠIFRA</div>
+          <div class="up-th" style="flex:1;">ARTIKAL</div>
+          <div class="up-th up-th-num" style="width:100px;">KOL. KNJIGA</div>
+          <div class="up-th up-th-num" style="width:100px;">CIJ. KNJIGA</div>
+          <div class="up-th up-th-num" style="width:110px;">VRIJ. KNJIGA</div>
+          <div class="up-th up-th-num" style="width:100px;">KOL. POPIS</div>
+          <div class="up-th up-th-num" style="width:100px;">CIJ. POPIS</div>
+          <div class="up-th up-th-num" style="width:110px;">VRIJ. POPIS</div>
+          <div class="up-th up-th-num" style="width:90px;">RAZLIKA</div>
+          {% if inventura.status != 'zakljucena' %}
+          <div class="up-th" style="width:70px;"></div>
+          {% endif %}
+        </div>
+
+        {% for stavka in stavke %}
+        <div class="up-row {% if stavka.razlika_kolicine > 0 %}row-visak{% elif stavka.razlika_kolicine < 0 %}row-manjak{% endif %}">
+          <div class="up-td" style="width:100px;">
+            <span class="up-konto-badge">{{ stavka.artikal.sifra }}</span>
+          </div>
+          <div class="up-td" style="flex:1;">
+            <div class="up-opis-main">{{ stavka.artikal.naziv }}</div>
+            {% if stavka.napomena %}<div class="up-opis-sub">{{ stavka.napomena }}</div>{% endif %}
+          </div>
+
+          {% if inventura.status != 'zakljucena' %}
+          <form method="post" style="display:contents;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_stavka">
+            <input type="hidden" name="stavka_id" value="{{ stavka.id }}">
+
+            <div class="up-td up-td-num" style="width:100px;">
+              <input type="number" name="kolicina_knjig" value="{{ stavka.kolicina_knjig }}" step="0.001" min="0"
+                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:90px !important; text-align:right !important; outline:none !important;"
+                onchange="this.form.submit()">
+            </div>
+            <div class="up-td up-td-num" style="width:100px;">
+              <input type="number" name="cijena_knjig" value="{{ stavka.cijena_knjig }}" step="0.01" min="0"
+                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:90px !important; text-align:right !important; outline:none !important;"
+                onchange="this.form.submit()">
+            </div>
+            <div class="up-td up-td-num" style="width:110px; font-family:monospace; color:#60a5fa; font-weight:600;">
+              {{ stavka.vrijednost_knjig|floatformat:2 }}
+            </div>
+            <div class="up-td up-td-num" style="width:100px;">
+              <input type="number" name="kolicina_popis" value="{{ stavka.kolicina_popis }}" step="0.001" min="0"
+                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:90px !important; text-align:right !important; outline:none !important;"
+                onchange="this.form.submit()">
+            </div>
+            <div class="up-td up-td-num" style="width:100px;">
+              <input type="number" name="cijena_popis" value="{{ stavka.cijena_popis }}" step="0.01" min="0"
+                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:90px !important; text-align:right !important; outline:none !important;"
+                onchange="this.form.submit()">
+            </div>
+          </form>
+          {% else %}
+          <div class="up-td up-td-num" style="width:100px; font-family:monospace;">{{ stavka.kolicina_knjig|floatformat:3 }}</div>
+          <div class="up-td up-td-num" style="width:100px; font-family:monospace;">{{ stavka.cijena_knjig|floatformat:2 }}</div>
+          <div class="up-td up-td-num" style="width:110px; font-family:monospace; color:#60a5fa; font-weight:600;">{{ stavka.vrijednost_knjig|floatformat:2 }}</div>
+          <div class="up-td up-td-num" style="width:100px; font-family:monospace;">{{ stavka.kolicina_popis|floatformat:3 }}</div>
+          <div class="up-td up-td-num" style="width:100px; font-family:monospace;">{{ stavka.cijena_popis|floatformat:2 }}</div>
+          {% endif %}
+
+          <div class="up-td up-td-num" style="width:110px; font-family:monospace; color:#34d399; font-weight:600;">
+            {{ stavka.vrijednost_popis|floatformat:2 }}
+          </div>
+
+          <div class="up-td up-td-num" style="width:90px;">
+            {% if stavka.razlika_kolicine > 0 %}
+            <span style="color:#86efac; font-family:monospace; font-size:12px; font-weight:700;">+{{ stavka.vrijednost_viska|floatformat:2 }}</span>
+            {% elif stavka.razlika_kolicine < 0 %}
+            <span style="color:#fca5a5; font-family:monospace; font-size:12px; font-weight:700;">-{{ stavka.vrijednost_manjka|floatformat:2 }}</span>
+            {% else %}
+            <span style="color:rgba(255,255,255,0.2); font-size:12px;">0.00</span>
+            {% endif %}
+          </div>
+
+          {% if inventura.status != 'zakljucena' %}
+          <div class="up-td" style="width:70px; text-align:center;">
+            <form method="post" onsubmit="return confirm('Ukloniti stavku?')">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="obrisi_stavku">
+              <input type="hidden" name="stavka_id" value="{{ stavka.id }}">
+              <button type="submit" class="btn-delete" style="padding:4px 8px;">×</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="up-empty">Nema stavki. Dodajte artikle gore.</div>
+        {% endfor %}
+
+        {% if stavke %}
+        <div style="border-top:1px solid rgba(255,255,255,0.1); padding:14px 16px; display:flex; justify-content:flex-end; background:rgba(255,255,255,0.03); gap:40px;">
+          <div style="display:flex; flex-direction:column; gap:4px; text-align:right;">
+            <span style="color:rgba(255,255,255,0.4); font-size:11px;">UKUPNI VIŠAK</span>
+            <span style="color:#86efac; font-family:monospace; font-size:16px; font-weight:700;">{{ inventura.ukupni_visak|floatformat:2 }} KM</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px; text-align:right;">
+            <span style="color:rgba(255,255,255,0.4); font-size:11px;">UKUPNI MANJAK</span>
+            <span style="color:#fca5a5; font-family:monospace; font-size:16px; font-weight:700;">{{ inventura.ukupni_manjak|floatformat:2 }} KM</span>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.up-title { color: #fff !important; }
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-start; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:12px; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.inv-add-bar { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px 20px; }
+.up-table-wrap { overflow-x:auto; border-radius:14px; }
+.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; min-width:1100px; }
+.up-table-head { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px; }
+.up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
+.up-th-num { text-align:right; }
+.up-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s; }
+.up-row:last-child { border-bottom:none; }
+.up-row:hover { background:rgba(255,255,255,0.04); }
+.row-visak { border-left:3px solid rgba(134,239,172,0.4); }
+.row-manjak { border-left:3px solid rgba(252,165,165,0.4); }
+.up-td { color:rgba(255,255,255,0.75); font-size:13px; white-space:nowrap; }
+.up-td-num { text-align:right; }
+.up-opis-main { color:#fff; font-size:13px; font-weight:500; }
+.up-opis-sub { color:rgba(255,255,255,0.3); font-size:11px; }
+.up-konto-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.up-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:60px 20px; }
+.btn-delete { background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:5px 10px; font-family:'Inter',sans-serif; font-size:12px; cursor:pointer; }
+.btn-delete:hover { background:rgba(220,38,38,0.25); }
+.btn-print-lg { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 18px; border-radius:9px; font-size:13px; font-weight:500; text-decoration:none; }
+.btn-zakljuci { background:rgba(22,163,74,0.2); color:#86efac; border:1px solid rgba(22,163,74,0.3); padding:9px 18px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; }
+.btn-zakljuci:hover { background:rgba(22,163,74,0.3); }
+.badge-active { background:rgba(22,163,74,0.18); color:#86efac; border:1px solid rgba(22,163,74,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+.badge-inactive { background:rgba(107,114,128,0.18); color:#9ca3af; border:1px solid rgba(107,114,128,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+</script>
+{% endblock %}
