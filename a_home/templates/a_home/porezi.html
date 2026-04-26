@@ -1,0 +1,47 @@
+{% extends 'a_home/base_two_col.html' %}
+
+{% block page_title %}PDV stope{% endblock %}
+{% block page_sub %}Upravljanje PDV stopama{% endblock %}
+{% block list_title %}Lista PDV stopa{% endblock %}
+{% block cancel_url %}{% url 'porezi' %}{% endblock %}
+
+{% block form_fields %}
+<div class="field">
+  <label>NAZIV</label>
+  {{ form.naziv }}
+</div>
+<div class="field">
+  <label>STOPA (%)</label>
+  {{ form.stopa }}
+</div>
+<div class="field-check">
+  {{ form.aktivan }}
+  <label for="{{ form.aktivan.id_for_label }}">Aktivna</label>
+</div>
+{% endblock %}
+
+{% block list_content %}
+{% for obj in lista %}
+<div class="list-row {% if edit_obj.pk == obj.pk %}list-row-active{% endif %}">
+  <div class="list-row-main">
+    <span class="list-row-sifra">{{ obj.stopa }}%</span>
+    <span class="list-row-title">{{ obj.naziv }}</span>
+    {% if obj.aktivan %}
+    <span class="badge-active">Aktivna</span>
+    {% else %}
+    <span class="badge-inactive">Neaktivna</span>
+    {% endif %}
+  </div>
+  <div class="list-row-actions">
+    <a href="{% url 'porezi' %}?edit={{ obj.pk }}" class="btn-edit">Izmijeni</a>
+    <form method="post" action="{% url 'porez_delete' obj.pk %}"
+      onsubmit="return confirm('Obrisati PDV stopu {{ obj.naziv }}?')">
+      {% csrf_token %}
+      <button type="submit" class="btn-delete">Obriši</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="list-empty">Nema unesenih PDV stopa.</div>
+{% endfor %}
+{% endblock %}

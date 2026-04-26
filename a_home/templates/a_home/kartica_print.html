@@ -17,7 +17,6 @@
     .table-header { display: flex; border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 4px; font-size: 10pt; }
     .col-datum   { width: 100px; }
     .col-nalog   { width: 55px; }
-    .col-partner { width: 160px; font-size: 9.5pt; }
     .col-opis    { flex: 1; }
     .col-duguje  { width: 100px; text-align: right; }
     .col-pot     { width: 100px; text-align: right; }
@@ -47,7 +46,7 @@
     <button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;font-family:monospace;">
       🖨 Štampaj
     </button>
-    <button onclick="window.close()" style="background:#eee;color:#333;border:1px solid #ccc;padding:10px 20px;font-size:13px;border-radius:4px;cursor:pointer;font-family:monospace;">
+    <button onclick="history.back()" style="background:#eee;color:#333;border:1px solid #ccc;padding:10px 20px;font-size:13px;border-radius:4px;cursor:pointer;font-family:monospace;">
       ✕ Zatvori
     </button>
   </div>
@@ -63,7 +62,14 @@
   <div class="doc-info">Dana : {{ godina.godina }}-01-01 / {% now "d.m.Y" %}</div>
   <div class="doc-info doc-info-bold">ANALITIČKA KARTICA GLAVNE KNJIGE</div>
   <div class="doc-info doc-info-bold">
-    KONTO : {{ konto.broj }} {{ partner.sifra }} {{ partner.naziv_1 }}
+    KONTO : {{ konto.broj }}
+    {% with prva_stavka=stavke.0 %}
+      {% if prva_stavka.partner %}
+        {{ prva_stavka.partner.sifra }} {{ prva_stavka.partner.naziv_1 }}
+      {% else %}
+        {{ konto.naziv }}
+      {% endif %}
+    {% endwith %}
   </div>
 
   <hr class="header-divider">
@@ -73,7 +79,6 @@
   <div class="table-header">
     <div class="col-datum">Datum</div>
     <div class="col-nalog">Nalog</div>
-    <div class="col-partner">Partner</div>
     <div class="col-opis">Opis knjiženja</div>
     <div class="col-duguje">Duguje</div>
     <div class="col-pot">Potražuje</div>
@@ -84,9 +89,6 @@
     <div class="table-row">
       <div class="col-datum">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
       <div class="col-nalog">{{ stavka.knjizenje.broj_naloga|stringformat:"04d" }}</div>
-      <div class="col-partner">
-        {% if stavka.partner %}{{ stavka.partner.sifra }} {{ stavka.partner.naziv_1 }}{% else %}—{% endif %}
-      </div>
       <div class="col-opis">{{ stavka.opis|default:stavka.knjizenje.opis|default:"—" }}{% if stavka.knjizenje.dokument_broj %} {{ stavka.knjizenje.dokument_broj }}{% endif %}</div>
       <div class="col-duguje">{% if stavka.duguje > 0 %}{{ stavka.duguje|floatformat:2 }}{% else %}0.00{% endif %}</div>
       <div class="col-pot">{% if stavka.potrazuje > 0 %}{{ stavka.potrazuje|floatformat:2 }}{% else %}0.00{% endif %}</div>
@@ -112,7 +114,16 @@
   <hr class="totals-divider">
 
   <div class="saldo-line">
-    <div class="saldo-konto">{{ konto.broj }} {{ partner.sifra }} {{ partner.naziv_1 }}</div>
+    <div class="saldo-konto">
+      {{ konto.broj }}
+      {% with prva_stavka=stavke.0 %}
+        {% if prva_stavka.partner %}
+          {{ prva_stavka.partner.sifra }} {{ prva_stavka.partner.naziv_1 }}
+        {% else %}
+          {{ konto.naziv }}
+        {% endif %}
+      {% endwith %}
+    </div>
     <div class="saldo-d">D: {{ ukupno_duguje|floatformat:2 }}</div>
     <div class="saldo-p">P: {{ ukupno_potrazuje|floatformat:2 }}</div>
     <div class="saldo-s">S: {{ saldo|floatformat:2 }}</div>

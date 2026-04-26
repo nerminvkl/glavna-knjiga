@@ -58,6 +58,8 @@ urlpatterns = [
     path('stavka/<int:stavka_id>/obrisi/', obrisi_stavku, name='obrisi_stavku'),
     path('glavna-knjiga/<int:partner_id>/novo-knjizenje/', novo_knjizenje, name='novo_knjizenje'),
     path('knjizenje/<int:knjizenje_id>/print/', print_knjizenje, name='print_knjizenje'),
+    path('glavna-knjiga/<int:partner_id>/nalozi/', nalozi_view, name='nalozi'),
+    path('nalog/<int:nalog_id>/obrisi/', obrisi_nalog, name='obrisi_nalog'),
 
     # Matični podaci - Sintetika i Analitika
     path('glavna-knjiga/<int:partner_id>/sintetika/', sintetika_view, name='sintetika'),
@@ -81,6 +83,13 @@ urlpatterns = [
     path('api/artikli/search/', artikli_search_api, name='artikli_search_api'),
     path('kalkulacija/<int:pk>/obrisi/', obrisi_kalkulaciju, name='obrisi_kalkulaciju'),
     path('kalkulacija/<int:kalk_id>/zakljuci/', zakljuci_kalkulaciju, name='zakljuci_kalkulaciju'),
+
+    # maloprodaja maticni podaci
+    path('maloprodaja/grupe-artikala/', grupe_artikala_view, name='grupe_artikala'),
+    path('maloprodaja/grupe-artikala/delete/<int:pk>/', grupa_artikala_delete, name='grupa_artikala_delete'),
+    path('maloprodaja/porezi/', porezi_view, name='porezi'),
+    path('maloprodaja/porezi/delete/<int:pk>/', porez_delete, name='porez_delete'),
+    path('glavna-knjiga/<int:partner_id>/bruto-bilanca/', bruto_bilanca_view, name='bruto_bilanca'),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,40 @@
+{% extends 'a_home/base_two_col.html' %}
+
+{% block page_title %}Grupe artikala{% endblock %}
+{% block page_sub %}Upravljanje grupama artikala{% endblock %}
+{% block list_title %}Lista grupa{% endblock %}
+{% block cancel_url %}{% url 'grupe_artikala' %}{% endblock %}
+
+{% block form_fields %}
+<div class="field-row">
+  <div class="field" style="flex:0 0 130px">
+    <label>ŠIFRA</label>
+    {{ form.sifra }}
+  </div>
+  <div class="field">
+    <label>NAZIV GRUPE</label>
+    {{ form.naziv }}
+  </div>
+</div>
+{% endblock %}
+
+{% block list_content %}
+{% for obj in lista %}
+<div class="list-row {% if edit_obj.pk == obj.pk %}list-row-active{% endif %}">
+  <div class="list-row-main">
+    <span class="list-row-sifra">{{ obj.sifra }}</span>
+    <span class="list-row-title">{{ obj.naziv }}</span>
+  </div>
+  <div class="list-row-actions">
+    <a href="{% url 'grupe_artikala' %}?edit={{ obj.pk }}" class="btn-edit">Izmijeni</a>
+    <form method="post" action="{% url 'grupa_artikala_delete' obj.pk %}"
+      onsubmit="return confirm('Obrisati grupu {{ obj.naziv }}?')">
+      {% csrf_token %}
+      <button type="submit" class="btn-delete">Obriši</button>
+    </form>
+  </div>
+</div>
+{% empty %}
+<div class="list-empty">Nema unesenih grupa.</div>
+{% endfor %}
+{% endblock %}

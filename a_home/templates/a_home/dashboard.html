@@ -79,13 +79,30 @@
             </a>
           </div>
       
-          <a href="{% url 'unos_prometa' partner.id %}" class="gk-link">
+          <div class="gk-link gk-link-parent" onclick="toggleUnosPrometa()">
             <div class="gk-link-left">
               <div class="gk-link-num">02</div>
               <span>Unos prometa</span>
             </div>
-            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
+            <svg class="gk-link-arr" id="unos-prometa-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s;"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          
+          <div id="unos-prometa-sub" style="display:none; padding-left: 16px;">
+            <a href="{% url 'unos_prometa' partner.id %}" class="gk-link gk-link-sub">
+              <div class="gk-link-left">
+                <div class="gk-link-num" style="font-size:10px;">02a</div>
+                <span>Novi unos</span>
+              </div>
+              <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="{% url 'nalozi' partner.id %}" class="gk-link gk-link-sub">
+              <div class="gk-link-left">
+                <div class="gk-link-num" style="font-size:10px;">02b</div>
+                <span>Nalozi knjiženja</span>
+              </div>
+              <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
       
           <a href="{% url 'kartica' partner.id %}" class="gk-link">
             <div class="gk-link-left">
@@ -95,10 +112,10 @@
             <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
       
-          <a href="#" class="gk-link">
+          <a href="{% url 'bruto_bilanca' partner.id %}" class="gk-link">
             <div class="gk-link-left">
               <div class="gk-link-num">04</div>
-              <span>Izvještaji</span>
+              <span>Bruto bilanca</span>
             </div>
             <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -137,53 +154,80 @@
       </script>
 
       <!-- MALOPRODAJA -->
-      <div class="gk-card" style="--accent: #34d399; --accent-bg: rgba(52,211,153,0.12); --accent-border: rgba(52,211,153,0.2);">
-        <div class="gk-card-top">
-          <div class="gk-card-badge" style="background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-            </svg>
-          </div>
-          <div class="gk-card-info">
-            <div class="gk-card-title">Maloprodaja</div>
-            <div class="gk-card-sub">Robno knjigovodstvo</div>
-          </div>
-          <div class="gk-card-count">4</div>
-        </div>
-
-        <div class="gk-divider"></div>
-
-        <div class="gk-links">
-          <a href="#" class="gk-link">
-            <div class="gk-link-left">
-              <div class="gk-link-num">01</div>
-              <span>Matični podaci</span>
-            </div>
-            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="{% url 'kalkulacije' partner.id %}" class="gk-link">
-            <div class="gk-link-left">
-              <div class="gk-link-num">02</div>
-              <span>Kalkulacije</span>
-            </div>
-            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="#" class="gk-link">
-            <div class="gk-link-left">
-              <div class="gk-link-num">03</div>
-              <span>Inventura</span>
-            </div>
-            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-          <a href="#" class="gk-link">
-            <div class="gk-link-left">
-              <div class="gk-link-num">04</div>
-              <span>Dnevnik</span>
-            </div>
-            <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-        </div>
+<div class="gk-card" style="--accent: #34d399; --accent-bg: rgba(52,211,153,0.12); --accent-border: rgba(52,211,153,0.2);">
+    <div class="gk-card-top">
+      <div class="gk-card-badge" style="background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
       </div>
+      <div class="gk-card-info">
+        <div class="gk-card-title">Maloprodaja</div>
+        <div class="gk-card-sub">Robno knjigovodstvo</div>
+      </div>
+      <div class="gk-card-count">4</div>
+    </div>
+  
+    <div class="gk-divider"></div>
+  
+    <div class="gk-links">
+  
+      <!-- MATIČNI PODACI sa podlinkovima -->
+      <div class="gk-link gk-link-parent" onclick="toggleMaticniMalo()">
+        <div class="gk-link-left">
+          <div class="gk-link-num">01</div>
+          <span>Matični podaci</span>
+        </div>
+        <svg class="gk-link-arr" id="maticni-malo-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s;"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+  
+      <div id="maticni-malo-sub" style="display:none; padding-left: 16px;">
+        <a href="{% url 'artikli' %}" class="gk-link gk-link-sub" style="border-left-color: rgba(52,211,153,0.2);">
+          <div class="gk-link-left">
+            <div class="gk-link-num" style="font-size:10px;">01a</div>
+            <span>Artikli</span>
+          </div>
+          <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="{% url 'grupe_artikala' %}" class="gk-link gk-link-sub" style="border-left-color: rgba(52,211,153,0.2);">
+          <div class="gk-link-left">
+            <div class="gk-link-num" style="font-size:10px;">01b</div>
+            <span>Grupe artikala</span>
+          </div>
+          <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="{% url 'porezi' %}" class="gk-link gk-link-sub" style="border-left-color: rgba(52,211,153,0.2);">
+          <div class="gk-link-left">
+            <div class="gk-link-num" style="font-size:10px;">01c</div>
+            <span>PDV stope</span>
+          </div>
+          <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+  
+      <a href="{% url 'kalkulacije' partner.id %}" class="gk-link">
+        <div class="gk-link-left">
+          <div class="gk-link-num">02</div>
+          <span>Kalkulacije</span>
+        </div>
+        <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" class="gk-link">
+        <div class="gk-link-left">
+          <div class="gk-link-num">03</div>
+          <span>Inventura</span>
+        </div>
+        <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#" class="gk-link">
+        <div class="gk-link-left">
+          <div class="gk-link-num">04</div>
+          <span>Dnevnik</span>
+        </div>
+        <svg class="gk-link-arr" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
 
     </div>
   </div>
@@ -197,6 +241,22 @@
   }
   setInterval(updateTime, 1000);
   updateTime();
+
+  function toggleMaticniMalo() {
+  const sub = document.getElementById('maticni-malo-sub');
+  const arrow = document.getElementById('maticni-malo-arrow');
+  const open = sub.style.display === 'none';
+  sub.style.display = open ? 'block' : 'none';
+  arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleUnosPrometa() {
+  const sub = document.getElementById('unos-prometa-sub');
+  const arrow = document.getElementById('unos-prometa-arrow');
+  const open = sub.style.display === 'none';
+  sub.style.display = open ? 'block' : 'none';
+  arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
 </script>
 
 {% endblock %}

@@ -16,7 +16,7 @@ from django.conf import settings as django_settings
 from .models import (
     PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -843,3 +843,163 @@ def get_pozadina(request):
         except:
             pass
     return 'pozadina.png'
+
+# ── GRUPE ARTIKALA ─────────────────────────────────────────────────────────────
+@login_required
+def grupe_artikala_view(request):
+    from django import forms
+
+    class GrupaForm(forms.ModelForm):
+        class Meta:
+            model = GrupaArtikla
+            fields = ['sifra', 'naziv']
+
+    edit_obj = None
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        edit_obj = get_object_or_404(GrupaArtikla, id=edit_id)
+
+    if request.method == 'POST':
+        form = GrupaForm(request.POST, instance=edit_obj)
+        if form.is_valid():
+            form.save()
+            return redirect('grupe_artikala')
+    else:
+        form = GrupaForm(instance=edit_obj)
+
+    return render(request, 'a_home/grupe_artikala.html', {
+        'form': form,
+        'lista': GrupaArtikla.objects.all(),
+        'edit_obj': edit_obj,
+        'show_header': False,
+    })
+
+@login_required
+def grupa_artikala_delete(request, pk):
+    obj = get_object_or_404(GrupaArtikla, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+    return redirect('grupe_artikala')
+
+
+# ── PDV STOPE ──────────────────────────────────────────────────────────────────
+@login_required
+def porezi_view(request):
+    from django import forms
+
+    class PorezForm(forms.ModelForm):
+        class Meta:
+            model = Porez
+            fields = ['naziv', 'stopa', 'aktivan']
+
+    edit_obj = None
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        edit_obj = get_object_or_404(Porez, id=edit_id)
+
+    if request.method == 'POST':
+        form = PorezForm(request.POST, instance=edit_obj)
+        if form.is_valid():
+            form.save()
+            return redirect('porezi')
+    else:
+        form = PorezForm(instance=edit_obj)
+
+    return render(request, 'a_home/porezi.html', {
+        'form': form,
+        'lista': Porez.objects.all(),
+        'edit_obj': edit_obj,
+        'show_header': False,
+    })
+
+@login_required
+def porez_delete(request, pk):
+    obj = get_object_or_404(Porez, pk=pk)
+    if request.method == 'POST':
+        obj.delete()
+    return redirect('porezi')
+
+
+@login_required
+def bruto_bilanca_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+    
+    # Grupiši stavke po kontu i partneru
+    from django.db.models import Sum
+    from collections import defaultdict
+
+    stavke_qs = StavkaKnjizenja.objects.filter(
+        knjizenje__glavna_knjiga=glavna_knjiga
+    ).select_related('konto', 'partner').values(
+        'konto__broj', 'konto__naziv', 'partner__sifra', 'partner__naziv_1', 'partner_id', 'konto_id'
+    ).annotate(
+        ukupno_duguje=Sum('duguje'),
+        ukupno_potrazuje=Sum('potrazuje')
+    ).order_by('konto__broj', 'partner__sifra')
+
+    redovi = []
+    for s in stavke_qs:
+        duguje = s['ukupno_duguje'] or 0
+        potrazuje = s['ukupno_potrazuje'] or 0
+        saldo_d = duguje - potrazuje if duguje > potrazuje else 0
+        saldo_p = potrazuje - duguje if potrazuje > duguje else 0
+        redovi.append({
+            'konto_broj': s['konto__broj'],
+            'naziv': s['partner__naziv_1'] or s['konto__naziv'],
+            'partner_sifra': s['partner__sifra'] or '',
+            'duguje': duguje,
+            'potrazuje': potrazuje,
+            'saldo_d': saldo_d,
+            'saldo_p': saldo_p,
+        })
+
+    ukupno_duguje = sum(r['duguje'] for r in redovi)
+    ukupno_potrazuje = sum(r['potrazuje'] for r in redovi)
+    ukupno_saldo_d = sum(r['saldo_d'] for r in redovi)
+    ukupno_saldo_p = sum(r['saldo_p'] for r in redovi)
+
+    return render(request, 'a_home/bruto_bilanca.html', {
+        'partner': partner,
+        'godina': godina,
+        'redovi': redovi,
+        'ukupno_duguje': ukupno_duguje,
+        'ukupno_potrazuje': ukupno_potrazuje,
+        'ukupno_saldo_d': ukupno_saldo_d,
+        'ukupno_saldo_p': ukupno_saldo_p,
+        'show_header': False,
+    })
+
+@login_required
+def nalozi_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+    nalozi = Knjizenje.objects.filter(
+        glavna_knjiga=glavna_knjiga
+    ).prefetch_related('stavke').order_by('broj_naloga') if glavna_knjiga else []
+
+    return render(request, 'a_home/nalozi.html', {
+        'partner': partner,
+        'godina': godina,
+        'nalozi': nalozi,
+        'show_header': False,
+    })
+
+@login_required
+def obrisi_nalog(request, nalog_id):
+    nalog = get_object_or_404(Knjizenje, id=nalog_id)
+    partner_id = nalog.glavna_knjiga.partner_id
+    if request.method == 'POST':
+        nalog.delete()
+    return redirect('nalozi', partner_id=partner_id)
+
+@login_required
+def zakljuci_nalog(request, nalog_id):
+    return redirect(request.META.get('HTTP_REFERER', '/'))
