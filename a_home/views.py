@@ -413,18 +413,42 @@ def kartica_view(request, partner_id):
     glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
     konta = Konto.objects.filter(aktivan=True).order_by('broj')
     odabrani_konto = None
+    odabrani_analiticki_partner = None
     stavke = None
     ukupno_duguje = 0
     ukupno_potrazuje = 0
     saldo = 0
 
     konto_id = request.GET.get('konto')
+    analiticki_partner_id = request.GET.get('analiticki_partner')
+
+    # Partneri koji imaju stavke na ovom kontu
+    dostupni_partneri = []
+
     if konto_id and glavna_knjiga:
         odabrani_konto = get_object_or_404(Konto, id=konto_id)
-        stavke = StavkaKnjizenja.objects.filter(
+
+        # Dohvati sve partnere koji imaju stavke na ovom kontu
+        dostupni_partneri = PoslovniPartner.objects.filter(
+            stavkaknjizenja__knjizenje__glavna_knjiga=glavna_knjiga,
+            stavkaknjizenja__konto=odabrani_konto
+        ).distinct().order_by('sifra')
+
+        stavke_qs = StavkaKnjizenja.objects.filter(
             knjizenje__glavna_knjiga=glavna_knjiga,
             konto=odabrani_konto
-        ).select_related('knjizenje', 'partner').order_by('knjizenje__datum', 'knjizenje__id')
+        )
+
+        if analiticki_partner_id:
+            odabrani_analiticki_partner = PoslovniPartner.objects.filter(
+                id=analiticki_partner_id
+            ).first()
+            if odabrani_analiticki_partner:
+                stavke_qs = stavke_qs.filter(partner=odabrani_analiticki_partner)
+
+        stavke = stavke_qs.select_related('knjizenje', 'partner').order_by(
+            'knjizenje__datum', 'knjizenje__id'
+        )
         ukupno_duguje = sum(s.duguje for s in stavke)
         ukupno_potrazuje = sum(s.potrazuje for s in stavke)
         saldo = ukupno_duguje - ukupno_potrazuje
@@ -434,6 +458,8 @@ def kartica_view(request, partner_id):
         'konta': konta,
         'stavke': stavke,
         'odabrani_konto': odabrani_konto,
+        'odabrani_analiticki_partner': odabrani_analiticki_partner,
+        'dostupni_partneri': dostupni_partneri,
         'ukupno_duguje': ukupno_duguje,
         'ukupno_potrazuje': ukupno_potrazuje,
         'saldo': saldo,
@@ -454,13 +480,20 @@ def kartica_print(request, partner_id, konto_id):
 
     odabrani_partner_id = request.GET.get('analiticki_partner')
     odabrani_partner = None
-    if odabrani_partner_id:
-        odabrani_partner = PoslovniPartner.objects.filter(id=odabrani_partner_id).first()
 
-    stavke = StavkaKnjizenja.objects.filter(
+    stavke_qs = StavkaKnjizenja.objects.filter(
         knjizenje__glavna_knjiga=glavna_knjiga,
         konto=konto
-    ).select_related('knjizenje').order_by('knjizenje__datum', 'knjizenje__id')
+    )
+
+    if odabrani_partner_id:
+        odabrani_partner = PoslovniPartner.objects.filter(id=odabrani_partner_id).first()
+        if odabrani_partner:
+            stavke_qs = stavke_qs.filter(partner=odabrani_partner)
+
+    stavke = stavke_qs.select_related('knjizenje', 'partner').order_by(
+        'knjizenje__datum', 'knjizenje__id'
+    )
 
     ukupno_duguje = sum(s.duguje for s in stavke)
     ukupno_potrazuje = sum(s.potrazuje for s in stavke)
@@ -928,14 +961,39 @@ def bruto_bilanca_view(request, partner_id):
         return redirect('login')
 
     glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
-    
-    # Grupiši stavke po kontu i partneru
-    from django.db.models import Sum
-    from collections import defaultdict
 
-    stavke_qs = StavkaKnjizenja.objects.filter(
+    from django.db.models import Sum
+    from datetime import date
+
+    # Filtri po datumu
+    datum_od_str = request.GET.get('datum_od', '')
+    datum_do_str = request.GET.get('datum_do', '')
+
+    datum_od = None
+    datum_do = None
+
+    try:
+        if datum_od_str:
+            datum_od = date.fromisoformat(datum_od_str)
+    except ValueError:
+        pass
+
+    try:
+        if datum_do_str:
+            datum_do = date.fromisoformat(datum_do_str)
+    except ValueError:
+        pass
+
+    stavke_filter = StavkaKnjizenja.objects.filter(
         knjizenje__glavna_knjiga=glavna_knjiga
-    ).select_related('konto', 'partner').values(
+    )
+
+    if datum_od:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__gte=datum_od)
+    if datum_do:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__lte=datum_do)
+
+    stavke_qs = stavke_filter.select_related('konto', 'partner').values(
         'konto__broj', 'konto__naziv', 'partner__sifra', 'partner__naziv_1', 'partner_id', 'konto_id'
     ).annotate(
         ukupno_duguje=Sum('duguje'),
@@ -971,8 +1029,81 @@ def bruto_bilanca_view(request, partner_id):
         'ukupno_potrazuje': ukupno_potrazuje,
         'ukupno_saldo_d': ukupno_saldo_d,
         'ukupno_saldo_p': ukupno_saldo_p,
+        'datum_od': datum_od_str,
+        'datum_do': datum_do_str,
         'show_header': False,
     })
+@login_required
+def bruto_bilanca_print(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+
+    from django.db.models import Sum
+    from datetime import date
+
+    datum_od_str = request.GET.get('datum_od', '')
+    datum_do_str = request.GET.get('datum_do', '')
+    datum_od = None
+    datum_do = None
+
+    try:
+        if datum_od_str:
+            datum_od = date.fromisoformat(datum_od_str)
+    except ValueError:
+        pass
+    try:
+        if datum_do_str:
+            datum_do = date.fromisoformat(datum_do_str)
+    except ValueError:
+        pass
+
+    stavke_filter = StavkaKnjizenja.objects.filter(
+        knjizenje__glavna_knjiga=glavna_knjiga
+    )
+    if datum_od:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__gte=datum_od)
+    if datum_do:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__lte=datum_do)
+
+    stavke_qs = stavke_filter.values(
+        'konto__broj', 'konto__naziv', 'partner__sifra', 'partner__naziv_1', 'partner_id', 'konto_id'
+    ).annotate(
+        ukupno_duguje=Sum('duguje'),
+        ukupno_potrazuje=Sum('potrazuje')
+    ).order_by('konto__broj', 'partner__sifra')
+
+    redovi = []
+    for s in stavke_qs:
+        duguje = s['ukupno_duguje'] or 0
+        potrazuje = s['ukupno_potrazuje'] or 0
+        saldo_d = duguje - potrazuje if duguje > potrazuje else 0
+        saldo_p = potrazuje - duguje if potrazuje > duguje else 0
+        redovi.append({
+            'konto_broj': s['konto__broj'],
+            'naziv': s['partner__naziv_1'] or s['konto__naziv'],
+            'partner_sifra': s['partner__sifra'] or '',
+            'duguje': duguje,
+            'potrazuje': potrazuje,
+            'saldo_d': saldo_d,
+            'saldo_p': saldo_p,
+        })
+
+    return render(request, 'a_home/bruto_bilanca_print.html', {
+        'partner': partner,
+        'godina': godina,
+        'redovi': redovi,
+        'ukupno_duguje': sum(r['duguje'] for r in redovi),
+        'ukupno_potrazuje': sum(r['potrazuje'] for r in redovi),
+        'ukupno_saldo_d': sum(r['saldo_d'] for r in redovi),
+        'ukupno_saldo_p': sum(r['saldo_p'] for r in redovi),
+        'datum_od': datum_od,
+        'datum_do': datum_do,
+    })
+
 
 @login_required
 def nalozi_view(request, partner_id):
@@ -1161,4 +1292,179 @@ def print_inventura(request, inventura_id):
         'partner': inventura.glavna_knjiga.partner,
         'godina': inventura.glavna_knjiga.godina,
         'stavke': stavke,
+    })
+
+@login_required
+def analitika_izvjestaj_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+
+    from django.db.models import Sum
+    from datetime import date
+
+    konto_od_str = request.GET.get('konto_od', '')
+    konto_do_str = request.GET.get('konto_do', '')
+    datum_od_str = request.GET.get('datum_od', '')
+    datum_do_str = request.GET.get('datum_do', '')
+
+    datum_od = None
+    datum_do = None
+    try:
+        if datum_od_str:
+            datum_od = date.fromisoformat(datum_od_str)
+    except ValueError:
+        pass
+    try:
+        if datum_do_str:
+            datum_do = date.fromisoformat(datum_do_str)
+    except ValueError:
+        pass
+
+    redovi = []
+    if glavna_knjiga and (konto_od_str or konto_do_str or datum_od or datum_do):
+        stavke_filter = StavkaKnjizenja.objects.filter(
+            knjizenje__glavna_knjiga=glavna_knjiga
+        )
+
+        if konto_od_str:
+            stavke_filter = stavke_filter.filter(konto__broj__gte=konto_od_str)
+        if konto_do_str:
+            stavke_filter = stavke_filter.filter(konto__broj__lte=konto_do_str)
+        if datum_od:
+            stavke_filter = stavke_filter.filter(knjizenje__datum__gte=datum_od)
+        if datum_do:
+            stavke_filter = stavke_filter.filter(knjizenje__datum__lte=datum_do)
+
+        stavke_qs = stavke_filter.values(
+            'konto__broj', 'konto__naziv',
+            'partner__sifra', 'partner__naziv_1',
+            'partner_id', 'konto_id'
+        ).annotate(
+            ukupno_duguje=Sum('duguje'),
+            ukupno_potrazuje=Sum('potrazuje')
+        ).order_by('konto__broj', 'partner__sifra')
+
+        for s in stavke_qs:
+            duguje = s['ukupno_duguje'] or 0
+            potrazuje = s['ukupno_potrazuje'] or 0
+            saldo_d = duguje - potrazuje if duguje > potrazuje else 0
+            saldo_p = potrazuje - duguje if potrazuje > duguje else 0
+            redovi.append({
+                'konto_broj': s['konto__broj'],
+                'konto_naziv': s['konto__naziv'],
+                'partner_sifra': s['partner__sifra'] or '',
+                'partner_naziv': s['partner__naziv_1'] or '',
+                'duguje': duguje,
+                'potrazuje': potrazuje,
+                'saldo_d': saldo_d,
+                'saldo_p': saldo_p,
+            })
+
+    ukupno_duguje = sum(r['duguje'] for r in redovi)
+    ukupno_potrazuje = sum(r['potrazuje'] for r in redovi)
+    ukupno_saldo_d = sum(r['saldo_d'] for r in redovi)
+    ukupno_saldo_p = sum(r['saldo_p'] for r in redovi)
+
+    return render(request, 'a_home/analitika_izvjestaj.html', {
+        'partner': partner,
+        'godina': godina,
+        'redovi': redovi,
+        'ukupno_duguje': ukupno_duguje,
+        'ukupno_potrazuje': ukupno_potrazuje,
+        'ukupno_saldo_d': ukupno_saldo_d,
+        'ukupno_saldo_p': ukupno_saldo_p,
+        'konto_od': konto_od_str,
+        'konto_do': konto_do_str,
+        'datum_od': datum_od_str,
+        'datum_do': datum_do_str,
+        'datum_od_obj': datum_od,
+        'datum_do_obj': datum_do,
+        'show_header': False,
+    })
+
+
+@login_required
+def analitika_izvjestaj_print(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+
+    from django.db.models import Sum
+    from datetime import date
+
+    konto_od_str = request.GET.get('konto_od', '')
+    konto_do_str = request.GET.get('konto_do', '')
+    datum_od_str = request.GET.get('datum_od', '')
+    datum_do_str = request.GET.get('datum_do', '')
+
+    datum_od = None
+    datum_do = None
+    try:
+        if datum_od_str:
+            datum_od = date.fromisoformat(datum_od_str)
+    except ValueError:
+        pass
+    try:
+        if datum_do_str:
+            datum_do = date.fromisoformat(datum_do_str)
+    except ValueError:
+        pass
+
+    stavke_filter = StavkaKnjizenja.objects.filter(
+        knjizenje__glavna_knjiga=glavna_knjiga
+    )
+    if konto_od_str:
+        stavke_filter = stavke_filter.filter(konto__broj__gte=konto_od_str)
+    if konto_do_str:
+        stavke_filter = stavke_filter.filter(konto__broj__lte=konto_do_str)
+    if datum_od:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__gte=datum_od)
+    if datum_do:
+        stavke_filter = stavke_filter.filter(knjizenje__datum__lte=datum_do)
+
+    stavke_qs = stavke_filter.values(
+        'konto__broj', 'konto__naziv',
+        'partner__sifra', 'partner__naziv_1',
+        'partner_id', 'konto_id'
+    ).annotate(
+        ukupno_duguje=Sum('duguje'),
+        ukupno_potrazuje=Sum('potrazuje')
+    ).order_by('konto__broj', 'partner__sifra')
+
+    redovi = []
+    for s in stavke_qs:
+        duguje = s['ukupno_duguje'] or 0
+        potrazuje = s['ukupno_potrazuje'] or 0
+        saldo_d = duguje - potrazuje if duguje > potrazuje else 0
+        saldo_p = potrazuje - duguje if potrazuje > duguje else 0
+        redovi.append({
+            'konto_broj': s['konto__broj'],
+            'konto_naziv': s['konto__naziv'],
+            'partner_sifra': s['partner__sifra'] or '',
+            'partner_naziv': s['partner__naziv_1'] or '',
+            'duguje': duguje,
+            'potrazuje': potrazuje,
+            'saldo_d': saldo_d,
+            'saldo_p': saldo_p,
+        })
+
+    return render(request, 'a_home/analitika_izvjestaj_print.html', {
+        'partner': partner,
+        'godina': godina,
+        'redovi': redovi,
+        'ukupno_duguje': sum(r['duguje'] for r in redovi),
+        'ukupno_potrazuje': sum(r['potrazuje'] for r in redovi),
+        'ukupno_saldo_d': sum(r['saldo_d'] for r in redovi),
+        'ukupno_saldo_p': sum(r['saldo_p'] for r in redovi),
+        'konto_od': konto_od_str,
+        'konto_do': konto_do_str,
+        'datum_od': datum_od,
+        'datum_do': datum_do,
     })

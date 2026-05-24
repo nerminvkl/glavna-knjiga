@@ -90,6 +90,9 @@ urlpatterns = [
     path('maloprodaja/porezi/', porezi_view, name='porezi'),
     path('maloprodaja/porezi/delete/<int:pk>/', porez_delete, name='porez_delete'),
     path('glavna-knjiga/<int:partner_id>/bruto-bilanca/', bruto_bilanca_view, name='bruto_bilanca'),
+    path('glavna-knjiga/<int:partner_id>/bruto-bilanca/print/', bruto_bilanca_print, name='bruto_bilanca_print'),
+    path('glavna-knjiga/<int:partner_id>/analitika-izvjestaj/', analitika_izvjestaj_view, name='analitika_izvjestaj'),
+    path('glavna-knjiga/<int:partner_id>/analitika-izvjestaj/print/', analitika_izvjestaj_print, name='analitika_izvjestaj_print'),
 
     # inventura linkovi
     path('glavna-knjiga/<int:partner_id>/inventure/', inventure_view, name='inventure'),

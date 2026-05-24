@@ -1,0 +1,106 @@
+@login_required
+def kartica_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = GlavnaKnjiga.objects.filter(partner=partner, godina=godina).first()
+    konta = Konto.objects.filter(aktivan=True).order_by('broj')
+    odabrani_konto = None
+    odabrani_analiticki_partner = None
+    stavke = None
+    ukupno_duguje = 0
+    ukupno_potrazuje = 0
+    saldo = 0
+
+    konto_id = request.GET.get('konto')
+    analiticki_partner_id = request.GET.get('analiticki_partner')
+
+    # Partneri koji imaju stavke na ovom kontu
+    dostupni_partneri = []
+
+    if konto_id and glavna_knjiga:
+        odabrani_konto = get_object_or_404(Konto, id=konto_id)
+
+        # Dohvati sve partnere koji imaju stavke na ovom kontu
+        dostupni_partneri = PoslovniPartner.objects.filter(
+            stavkaknjizenja__knjizenje__glavna_knjiga=glavna_knjiga,
+            stavkaknjizenja__konto=odabrani_konto
+        ).distinct().order_by('sifra')
+
+        stavke_qs = StavkaKnjizenja.objects.filter(
+            knjizenje__glavna_knjiga=glavna_knjiga,
+            konto=odabrani_konto
+        )
+
+        if analiticki_partner_id:
+            odabrani_analiticki_partner = PoslovniPartner.objects.filter(
+                id=analiticki_partner_id
+            ).first()
+            if odabrani_analiticki_partner:
+                stavke_qs = stavke_qs.filter(partner=odabrani_analiticki_partner)
+
+        stavke = stavke_qs.select_related('knjizenje', 'partner').order_by(
+            'knjizenje__datum', 'knjizenje__id'
+        )
+        ukupno_duguje = sum(s.duguje for s in stavke)
+        ukupno_potrazuje = sum(s.potrazuje for s in stavke)
+        saldo = ukupno_duguje - ukupno_potrazuje
+
+    return render(request, 'a_home/kartica.html', {
+        'partner': partner,
+        'konta': konta,
+        'stavke': stavke,
+        'odabrani_konto': odabrani_konto,
+        'odabrani_analiticki_partner': odabrani_analiticki_partner,
+        'dostupni_partneri': dostupni_partneri,
+        'ukupno_duguje': ukupno_duguje,
+        'ukupno_potrazuje': ukupno_potrazuje,
+        'saldo': saldo,
+        'godina': godina,
+        'show_header': False,
+    })
+
+
+@login_required
+def kartica_print(request, partner_id, konto_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    glavna_knjiga = get_object_or_404(GlavnaKnjiga, partner=partner, godina=godina)
+    konto = get_object_or_404(Konto, id=konto_id)
+
+    odabrani_partner_id = request.GET.get('analiticki_partner')
+    odabrani_partner = None
+
+    stavke_qs = StavkaKnjizenja.objects.filter(
+        knjizenje__glavna_knjiga=glavna_knjiga,
+        konto=konto
+    )
+
+    if odabrani_partner_id:
+        odabrani_partner = PoslovniPartner.objects.filter(id=odabrani_partner_id).first()
+        if odabrani_partner:
+            stavke_qs = stavke_qs.filter(partner=odabrani_partner)
+
+    stavke = stavke_qs.select_related('knjizenje', 'partner').order_by(
+        'knjizenje__datum', 'knjizenje__id'
+    )
+
+    ukupno_duguje = sum(s.duguje for s in stavke)
+    ukupno_potrazuje = sum(s.potrazuje for s in stavke)
+    saldo = ukupno_duguje - ukupno_potrazuje
+
+    return render(request, 'a_home/kartica_print.html', {
+        'partner': partner,
+        'godina': godina,
+        'konto': konto,
+        'stavke': stavke,
+        'ukupno_duguje': ukupno_duguje,
+        'ukupno_potrazuje': ukupno_potrazuje,
+        'saldo': saldo,
+        'odabrani_partner': odabrani_partner,
+    })

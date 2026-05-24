@@ -3,13 +3,12 @@
 {% block content %}
 
 <div class="portal">
-    <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
+  <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
   <div class="overlay"></div>
   {% include 'a_home/topbar.html' %}
 
   <div class="up-page">
 
-    <!-- HEADER -->
     <div class="up-header">
       <div class="up-header-left">
         <div class="up-breadcrumb">
@@ -34,6 +33,7 @@
           Pregled analitičke kartice
         </div>
         <form method="get" class="kartica-filter-form">
+
           <div class="kartica-filter-field">
             <label>KONTO</label>
             <input type="text" id="konto-search" placeholder="Unesite broj ili naziv konta..."
@@ -42,6 +42,21 @@
             <div id="konto-dropdown" class="konto-dropdown" style="display:none;"></div>
             <input type="hidden" name="konto" id="konto-id" value="{% if odabrani_konto %}{{ odabrani_konto.id }}{% endif %}">
           </div>
+
+          {% if odabrani_konto and dostupni_partneri %}
+          <div class="kartica-filter-field" style="position:relative;">
+            <label>PARTNER / ANALITIKA</label>
+            <input type="text" id="partner-search-kartica"
+              placeholder="Šifra ili naziv partnera..."
+              autocomplete="off"
+              oninput="searchPartnerKartica(this.value)"
+              onkeydown="handlePartnerKarticaKey(event)"
+              value="{% if odabrani_analiticki_partner %}{{ odabrani_analiticki_partner.sifra }} — {{ odabrani_analiticki_partner.naziv_1 }}{% endif %}">
+            <div id="partner-dropdown-kartica" class="konto-dropdown" style="display:none;"></div>
+            <input type="hidden" name="analiticki_partner" id="partner-id-kartica" value="{% if odabrani_analiticki_partner %}{{ odabrani_analiticki_partner.id }}{% endif %}">
+          </div>
+          {% endif %}
+
           <button type="submit" class="kartica-filter-btn">Prikaži karticu</button>
         </form>
       </div>
@@ -54,11 +69,15 @@
         <span class="kartica-konto-broj">{{ odabrani_konto.broj }}</span>
         <span class="kartica-konto-naziv">{{ odabrani_konto.naziv }}</span>
         <span class="kartica-konto-tip">{{ odabrani_konto.get_tip_display }}</span>
+        {% if odabrani_analiticki_partner %}
+        <span style="background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.25); color:#6ee7b7; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px;">
+          {{ odabrani_analiticki_partner.sifra }} — {{ odabrani_analiticki_partner.naziv_1 }}
+        </span>
+        {% endif %}
       </div>
-      <a href="{% url 'kartica_print' partner.id odabrani_konto.id %}" class="kartica-print-btn">
+      <a href="#" onclick="event.preventDefault(); window.open('{% url "kartica_print" partner.id odabrani_konto.id %}{% if odabrani_analiticki_partner %}?analiticki_partner={{ odabrani_analiticki_partner.id }}{% endif %}', '_blank')" class="kartica-print-btn">
         🖨 Štampaj karticu
       </a>
-
     </div>
 
     <!-- TABELA -->
@@ -67,6 +86,7 @@
         <div class="up-th" style="width:100px;">KONTO</div>
         <div class="up-th" style="width:110px;">DAT.DOK.</div>
         <div class="up-th" style="width:80px;">NALOG</div>
+        <div class="up-th" style="width:150px;">PARTNER</div>
         <div class="up-th" style="flex:1;">OPIS</div>
         <div class="up-th up-th-num">DUGUJE</div>
         <div class="up-th up-th-num">POTRAŽUJE</div>
@@ -75,7 +95,6 @@
 
       <div id="stavke-lista">
         {% if stavke %}
-          {% with running_saldo=0 %}
           {% for stavka in stavke %}
           <div class="up-row">
             <div class="up-td" style="width:100px;">
@@ -84,6 +103,16 @@
             <div class="up-td up-td-date" style="width:110px;">{{ stavka.knjizenje.datum|date:"d.m.Y" }}</div>
             <div class="up-td" style="width:80px; font-family:monospace; color:rgba(255,255,255,0.4); font-size:12px;">
               #{{ stavka.knjizenje.broj_naloga|stringformat:"04d" }}
+            </div>
+            <div class="up-td" style="width:150px;">
+              {% if stavka.partner %}
+              <div style="display:flex; flex-direction:column; gap:1px;">
+                <span style="color:#60a5fa; font-family:monospace; font-size:10px; font-weight:700;">{{ stavka.partner.sifra }}</span>
+                <span style="color:rgba(255,255,255,0.7); font-size:11px;">{{ stavka.partner.naziv_1 }}</span>
+              </div>
+              {% else %}
+              <span style="color:rgba(255,255,255,0.2);">—</span>
+              {% endif %}
             </div>
             <div class="up-td" style="flex:1;">
               <div class="up-opis-main">{{ stavka.opis|default:stavka.knjizenje.opis|default:"—" }}</div>
@@ -106,13 +135,11 @@
             </div>
           </div>
           {% endfor %}
-          {% endwith %}
         {% else %}
           <div class="up-empty">Nema stavki za odabrani konto u ovoj godini.</div>
         {% endif %}
       </div>
 
-      <!-- FOOTER TOTALS -->
       <div class="up-table-footer">
         <div class="up-footer-totals" style="min-width:500px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:6px; gap:20px;">
@@ -132,7 +159,10 @@
             </div>
           </div>
           <div class="up-razlika">
-            <span class="up-razlika-label">{{ odabrani_konto.broj }} {{ odabrani_konto.naziv }}</span>
+            <span class="up-razlika-label">
+              {{ odabrani_konto.broj }} {{ odabrani_konto.naziv }}
+              {% if odabrani_analiticki_partner %} · {{ odabrani_analiticki_partner.naziv_1 }}{% endif %}
+            </span>
             <span class="up-razlika-val {% if saldo == 0 %}zero{% endif %}">S: {{ saldo|floatformat:2 }}</span>
           </div>
         </div>
@@ -145,262 +175,87 @@
 </div>
 
 <style>
-.up-page {
-  position: relative;
-  z-index: 10;
-  min-height: 100vh;
-  padding: 90px 32px 40px;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.up-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.up-breadcrumb { color: rgba(255,255,255,0.3); font-size: 12px; margin-bottom: 6px; }
-.up-breadcrumb a { color: rgba(255,255,255,0.4); text-decoration: none; }
-.up-breadcrumb a:hover { color: #fff; }
-.up-title { color: #fff; font-size: 22px; font-weight: 700; }
-
-.up-firm-badge {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 8px 16px; border-radius: 10px;
-}
-.up-firm-sifra { color: #60a5fa; font-size: 12px; font-weight: 700; font-family: monospace; }
-.up-firm-naziv { color: #fff; font-size: 13px; font-weight: 500; }
-.up-firm-year {
-  background: rgba(96,165,250,0.15); border: 1px solid rgba(96,165,250,0.3);
-  color: #93c5fd; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
-}
-
-/* FILTER BOX */
-.kartica-filter-wrap {
-  display: flex;
-  justify-content: center;
-}
-
-.kartica-filter-box {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  padding: 20px 28px;
-  width: 100%;
-  max-width: 680px;
-}
-
-.kartica-filter-title {
-  color: rgba(255,255,255,0.5);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kartica-filter-form {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-
-.kartica-filter-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  position: relative;
-}
-
-.kartica-filter-field label {
-  color: rgba(255,255,255,0.35);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.kartica-filter-field input {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 10px;
-  color: #fff;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  padding: 11px 14px;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.kartica-filter-field input:focus { border-color: rgba(96,165,250,0.5); }
-.kartica-filter-field input::placeholder { color: rgba(255,255,255,0.2); }
-
-.kartica-filter-btn {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  padding: 11px 24px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-.kartica-filter-btn:hover { background: #1d4ed8; }
-
-/* KONTO DROPDOWN */
-.konto-dropdown {
-  position: fixed;
-  background: #1e3a5f;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  z-index: 99999;
-  max-height: 240px;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-}
-.konto-item {
-  padding: 10px 14px; cursor: pointer;
-  display: flex; gap: 10px; align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  transition: background 0.15s;
-}
-.konto-item:hover { background: rgba(255,255,255,0.08); }
-.konto-item-broj { color: #60a5fa; font-weight: 700; font-family: monospace; font-size: 13px; min-width: 70px; }
-.konto-item-naziv { color: #fff; font-size: 13px; }
-
-/* KONTO INFO BAR */
-.kartica-konto-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(96,165,250,0.08);
-  border: 1px solid rgba(96,165,250,0.2);
-  border-radius: 12px;
-  padding: 12px 20px;
-}
-
-.kartica-konto-left { display: flex; align-items: center; gap: 12px; }
-
-.kartica-konto-broj {
-  font-family: monospace; font-size: 16px; font-weight: 800;
-  color: #93c5fd; background: rgba(96,165,250,0.15);
-  border: 1px solid rgba(96,165,250,0.3);
-  padding: 4px 12px; border-radius: 8px;
-}
-
-.kartica-konto-naziv { color: #fff; font-size: 14px; font-weight: 600; }
-
-.kartica-konto-tip {
-  color: rgba(255,255,255,0.35); font-size: 11px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 2px 8px; border-radius: 6px;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
-
-.kartica-print-btn {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.6);
-  padding: 8px 18px; border-radius: 9px;
-  font-size: 13px; font-weight: 500;
-  text-decoration: none; transition: all 0.2s;
-}
-.kartica-print-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-
-/* TABLE */
-.up-table-card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 14px; overflow: hidden; flex: 1;
-}
-
-.up-table-head {
-  display: flex; align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04); gap: 8px;
-}
-
-.up-th { color: rgba(255,255,255,0.3); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; }
-.up-th-num { width: 120px; text-align: right; }
-
-.up-row {
-  display: flex; align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  gap: 8px; transition: background 0.15s;
-}
-.up-row:hover { background: rgba(255,255,255,0.04); }
-
-.up-td { color: rgba(255,255,255,0.75); font-size: 13px; }
-.up-td-date { color: rgba(255,255,255,0.4); font-size: 12px; }
-.up-td-num { width: 120px; text-align: right; }
-.up-opis-main { color: #fff; font-size: 13px; }
-.up-opis-sub { color: rgba(255,255,255,0.3); font-size: 11px; margin-top: 2px; }
-
-.up-konto-badge {
-  background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.2);
-  color: #93c5fd; font-family: monospace; font-size: 12px; font-weight: 700;
-  padding: 3px 9px; border-radius: 6px;
-}
-
-.up-amount { font-weight: 600; font-family: monospace; font-size: 13px; }
-.up-amount-d { color: #60a5fa; }
-.up-amount-p { color: #34d399; }
-
-.up-empty { text-align: center; color: rgba(255,255,255,0.2); font-size: 13px; padding: 40px 20px; }
-
-.up-table-footer {
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 14px 16px; display: flex;
-  justify-content: flex-end;
-  background: rgba(255,255,255,0.03);
-}
-
-.up-footer-totals { display: flex; flex-direction: column; gap: 6px; min-width: 340px; }
-.up-total-label { color: rgba(255,255,255,0.4); font-size: 12px; }
-.up-total-val { font-family: monospace; font-size: 14px; font-weight: 700; }
-.up-total-d { color: #60a5fa; }
-.up-total-p { color: #34d399; }
-
-.up-razlika {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 4px; padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-.up-razlika-label { color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; font-family: monospace; }
-.up-razlika-val { font-family: monospace; font-size: 16px; font-weight: 800; color: #fbbf24; }
-.up-razlika-val.zero { color: #34d399; }
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; }
+.up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
+.up-breadcrumb a:hover { color:#fff; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.up-firm-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); padding:8px 16px; border-radius:10px; }
+.up-firm-sifra { color:#60a5fa; font-size:12px; font-weight:700; font-family:monospace; }
+.up-firm-naziv { color:#fff; font-size:13px; font-weight:500; }
+.up-firm-year { background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.3); color:#93c5fd; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+.kartica-filter-wrap { display:flex; justify-content:center; }
+.kartica-filter-box { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:20px 28px; width:100%; max-width:860px; }
+.kartica-filter-title { color:rgba(255,255,255,0.5); font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.kartica-filter-form { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+.kartica-filter-field { flex:1; display:flex; flex-direction:column; gap:6px; position:relative; min-width:180px; }
+.kartica-filter-field label { color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; }
+.kartica-filter-field input { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:10px; color:#fff; font-family:'Inter',sans-serif; font-size:14px; padding:11px 14px; outline:none; transition:border-color 0.2s; width:100%; box-sizing:border-box; }
+.kartica-filter-field input:focus { border-color:rgba(96,165,250,0.5); }
+.kartica-filter-field input::placeholder { color:rgba(255,255,255,0.2); }
+.kartica-filter-btn { background:#2563eb; color:#fff; border:none; padding:11px 24px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.2s; white-space:nowrap; }
+.kartica-filter-btn:hover { background:#1d4ed8; }
+.konto-dropdown { position:fixed; background:#1e3a5f; border:1px solid rgba(255,255,255,0.2); border-radius:10px; z-index:99999; max-height:240px; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+.konto-item { padding:10px 14px; cursor:pointer; display:flex; gap:10px; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; }
+.konto-item:hover, .konto-item.active { background:rgba(255,255,255,0.08); }
+.konto-item-broj { color:#60a5fa; font-weight:700; font-family:monospace; font-size:13px; min-width:70px; }
+.konto-item-naziv { color:#fff; font-size:13px; }
+.kartica-konto-info { display:flex; align-items:center; justify-content:space-between; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.2); border-radius:12px; padding:12px 20px; }
+.kartica-konto-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.kartica-konto-broj { font-family:monospace; font-size:16px; font-weight:800; color:#93c5fd; background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.3); padding:4px 12px; border-radius:8px; }
+.kartica-konto-naziv { color:#fff; font-size:14px; font-weight:600; }
+.kartica-konto-tip { color:rgba(255,255,255,0.35); font-size:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.05em; }
+.kartica-print-btn { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.6); padding:8px 18px; border-radius:9px; font-size:13px; font-weight:500; text-decoration:none; transition:all 0.2s; }
+.kartica-print-btn:hover { background:rgba(255,255,255,0.12); color:#fff; }
+.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; overflow:hidden; flex:1; }
+.up-table-head { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px; }
+.up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
+.up-th-num { width:120px; text-align:right; }
+.up-row { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s; }
+.up-row:hover { background:rgba(255,255,255,0.04); }
+.up-td { color:rgba(255,255,255,0.75); font-size:13px; }
+.up-td-date { color:rgba(255,255,255,0.4); font-size:12px; }
+.up-td-num { width:120px; text-align:right; }
+.up-opis-main { color:#fff; font-size:13px; }
+.up-opis-sub { color:rgba(255,255,255,0.3); font-size:11px; margin-top:2px; }
+.up-konto-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.up-amount { font-weight:600; font-family:monospace; font-size:13px; }
+.up-amount-d { color:#60a5fa; }
+.up-amount-p { color:#34d399; }
+.up-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:40px 20px; }
+.up-table-footer { border-top:1px solid rgba(255,255,255,0.08); padding:14px 16px; display:flex; justify-content:flex-end; background:rgba(255,255,255,0.03); }
+.up-footer-totals { display:flex; flex-direction:column; gap:6px; min-width:340px; }
+.up-total-label { color:rgba(255,255,255,0.4); font-size:12px; }
+.up-total-val { font-family:monospace; font-size:14px; font-weight:700; }
+.up-total-d { color:#60a5fa; }
+.up-total-p { color:#34d399; }
+.up-razlika { display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); }
+.up-razlika-label { color:rgba(255,255,255,0.5); font-size:11px; font-weight:600; font-family:monospace; }
+.up-razlika-val { font-family:monospace; font-size:16px; font-weight:800; color:#fbbf24; }
+.up-razlika-val.zero { color:#34d399; }
 </style>
 
 <script>
+const dostupniPartneri = [
+  {% for p in dostupni_partneri %}
+  { id: {{ p.id }}, sifra: "{{ p.sifra }}", naziv: "{{ p.naziv_1|escapejs }}" },
+  {% endfor %}
+];
+
 let searchTimer = null;
+let filteredPartneriKartica = [];
+let activePartnerKarticaIndex = 0;
 
 function searchKonto(val) {
   clearTimeout(searchTimer);
   const dropdown = document.getElementById('konto-dropdown');
   const input = document.getElementById('konto-search');
-
   if (val.length < 1) {
     dropdown.style.display = 'none';
     document.getElementById('konto-id').value = '';
     return;
   }
-
   searchTimer = setTimeout(() => {
     fetch(`/konto/search/?q=${encodeURIComponent(val)}`)
       .then(r => r.json())
@@ -427,19 +282,106 @@ function odaberiKonto(id, broj, naziv) {
   document.getElementById('konto-dropdown').style.display = 'none';
 }
 
+function searchPartnerKartica(val) {
+  const dropdown = document.getElementById('partner-dropdown-kartica');
+  const input = document.getElementById('partner-search-kartica');
+
+  if (!val || val.length < 1) {
+    dropdown.style.display = 'none';
+    document.getElementById('partner-id-kartica').value = '';
+    filteredPartneriKartica = [];
+    return;
+  }
+
+  filteredPartneriKartica = dostupniPartneri.filter(p =>
+    p.sifra.toLowerCase().includes(val.toLowerCase()) ||
+    p.naziv.toLowerCase().includes(val.toLowerCase())
+  );
+  activePartnerKarticaIndex = 0;
+
+  if (filteredPartneriKartica.length === 0) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  if (filteredPartneriKartica.length === 1) {
+    odaberiPartneraKartica(filteredPartneriKartica[0]);
+    return;
+  }
+
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top = (rect.bottom + 4) + 'px';
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.width = rect.width + 'px';
+  dropdown.innerHTML = filteredPartneriKartica.map((p, i) => `
+    <div class="konto-item ${i === 0 ? 'active' : ''}" id="pk-item-${i}"
+         onclick='odaberiPartneraKartica(${JSON.stringify(p)})'>
+      <span class="konto-item-broj">${p.sifra}</span>
+      <span class="konto-item-naziv">${p.naziv}</span>
+    </div>`).join('');
+  dropdown.style.display = 'block';
+}
+
+function handlePartnerKarticaKey(e) {
+  const dropdown = document.getElementById('partner-dropdown-kartica');
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (dropdown.style.display === 'block' && filteredPartneriKartica.length > 0) {
+      odaberiPartneraKartica(filteredPartneriKartica[activePartnerKarticaIndex]);
+    } else {
+      document.querySelector('.kartica-filter-btn').click();
+    }
+    return;
+  }
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (activePartnerKarticaIndex < filteredPartneriKartica.length - 1) {
+      document.getElementById(`pk-item-${activePartnerKarticaIndex}`)?.classList.remove('active');
+      activePartnerKarticaIndex++;
+      document.getElementById(`pk-item-${activePartnerKarticaIndex}`)?.classList.add('active');
+    }
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (activePartnerKarticaIndex > 0) {
+      document.getElementById(`pk-item-${activePartnerKarticaIndex}`)?.classList.remove('active');
+      activePartnerKarticaIndex--;
+      document.getElementById(`pk-item-${activePartnerKarticaIndex}`)?.classList.add('active');
+    }
+  }
+
+  if (e.key === 'Escape') {
+    dropdown.style.display = 'none';
+  }
+}
+
+function odaberiPartneraKartica(p) {
+  document.getElementById('partner-id-kartica').value = p.id;
+  document.getElementById('partner-search-kartica').value = `${p.sifra} — ${p.naziv}`;
+  document.getElementById('partner-dropdown-kartica').style.display = 'none';
+  filteredPartneriKartica = [];
+  document.querySelector('form.kartica-filter-form').submit();
+}
+
 document.addEventListener('click', e => {
-  if (!e.target.closest('.kartica-filter-field'))
-    document.getElementById('konto-dropdown').style.display = 'none';
+  if (!e.target.closest('.kartica-filter-field')) {
+    const kd = document.getElementById('konto-dropdown');
+    const pd = document.getElementById('partner-dropdown-kartica');
+    if (kd) kd.style.display = 'none';
+    if (pd) pd.style.display = 'none';
+  }
 });
 
 function updateTime() {
   const now = new Date();
-  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 }
-setInterval(updateTime, 1000);
+setInterval(updateTime,1000);
 updateTime();
-
 </script>
 
 {% endblock %}
