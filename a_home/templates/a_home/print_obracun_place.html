@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <title>Obračun plaća — {{ obracun.mjesec|stringformat:"02d" }}/{{ obracun.godina.godina }}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Courier New',monospace; font-size:10pt; color:#000; background:#fff; padding:14mm 16mm; }
+    .no-print { margin-bottom:16px; display:flex; gap:10px; }
+    .firma-naziv { font-size:12pt; font-weight:bold; margin-bottom:2px; }
+    .firma-sub { font-size:10pt; margin-bottom:2px; }
+    .header-divider { border:none; border-top:1px solid #000; margin:8px 0; }
+    .doc-title { font-weight:bold; font-size:11pt; margin:8px 0 4px; }
+    .doc-info { font-size:10pt; margin-bottom:4px; }
+    .table-header { display:flex; border-bottom:1px dashed #000; padding-bottom:4px; margin-bottom:4px; font-size:9pt; font-weight:bold; }
+    .table-row { display:flex; font-size:9pt; padding:2px 0; border-bottom:1px dotted #ddd; }
+    .table-row:last-child { border-bottom:none; }
+    .col-rb     { width:25px; }
+    .col-naziv  { flex:1; }
+    .col-sati   { width:50px; text-align:right; }
+    .col-bruto  { width:80px; text-align:right; }
+    .col-dopr   { width:80px; text-align:right; }
+    .col-neto   { width:80px; text-align:right; }
+    .col-porez  { width:70px; text-align:right; }
+    .col-ispl   { width:85px; text-align:right; font-weight:bold; }
+    .totals-divider { border:none; border-top:2px solid #000; margin:6px 0 4px; }
+    .totals-row { display:flex; font-size:10pt; font-weight:bold; }
+    .print-footer { margin-top:20px; border-top:1px solid #000; padding-top:6px; display:flex; justify-content:space-between; font-size:8pt; }
+    @media print {
+      body { padding:8mm 10mm; }
+      .no-print { display:none !important; }
+      @page { margin:10mm; size:A4 landscape; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:10px 24px;font-size:13px;font-weight:bold;border-radius:4px;cursor:pointer;font-family:monospace;">🖨 Štampaj</button>
+    <button onclick="window.close(); history.back();" style="background:#eee;color:#333;border:1px solid #ccc;padding:10px 20px;font-size:13px;border-radius:4px;cursor:pointer;font-family:monospace;">✕ Zatvori</button>
+  </div>
+
+  <div class="firma-naziv">{{ partner.naziv_1 }}</div>
+  <div class="firma-sub">{{ partner.ptt }} {{ partner.mjesto }}</div>
+  {% if partner.telefon %}<div class="firma-sub">Tel: {{ partner.telefon }}</div>{% endif %}
+
+  <hr class="header-divider">
+
+  <div class="doc-title">PREGLED OBRAČUNATIH PLAĆA ZAPOSLENIKA</div>
+  <div class="doc-info">Za mjesec: {{ obracun.mjesec|stringformat:"02d" }}/{{ obracun.godina.godina }}</div>
+  <div class="doc-info">Strana: 1 &nbsp;&nbsp; Dana: {% now "d.m.Y" %}</div>
+
+  <hr class="header-divider">
+
+  <!-- NAPOMENA O STOPAMA -->
+  <div style="font-size:8.5pt; margin-bottom:8px;">
+    Stopa doprinosa: 31% &nbsp;|&nbsp; Stopa poreza: 10% &nbsp;|&nbsp; Lični odbitak: 300,00 KM × kf
+  </div>
+
+  <div class="table-header">
+    <div class="col-rb">Rb.</div>
+    <div class="col-naziv">Ime i prezime</div>
+    <div class="col-sati">Sati</div>
+    <div class="col-bruto">Bruto</div>
+    <div class="col-dopr">Doprinosi</div>
+    <div class="col-neto">Neto</div>
+    <div class="col-porez">Porez</div>
+    <div class="col-ispl">Za isplatu</div>
+  </div>
+
+  {% for stavka in stavke %}
+  <div class="table-row">
+    <div class="col-rb">{{ forloop.counter }}.</div>
+    <div class="col-naziv">{{ stavka.zaposlenik.prezime }} {{ stavka.zaposlenik.ime }}</div>
+    <div class="col-sati">{{ stavka.radni_sati|floatformat:0 }}</div>
+    <div class="col-bruto">{{ stavka.bruto_placa|floatformat:2 }}</div>
+    <div class="col-dopr">{{ stavka.doprinosi|floatformat:2 }}</div>
+    <div class="col-neto">{{ stavka.neto_placa|floatformat:2 }}</div>
+    <div class="col-porez">{{ stavka.porez|floatformat:2 }}</div>
+    <div class="col-ispl">{{ stavka.neto_za_isplatu|floatformat:2 }}</div>
+  </div>
+  {% empty %}
+  <div style="padding:10px 0; color:#888;">Nema zaposlenika.</div>
+  {% endfor %}
+
+  <hr class="totals-divider">
+  <div class="totals-row">
+    <div class="col-rb"></div>
+    <div class="col-naziv">UKUPNO ({{ stavke|length }} zaposlenika):</div>
+    <div class="col-sati"></div>
+    <div class="col-bruto">{{ obracun.ukupno_bruto|floatformat:2 }}</div>
+    <div class="col-dopr"></div>
+    <div class="col-neto"></div>
+    <div class="col-porez"></div>
+    <div class="col-ispl">{{ obracun.ukupno_neto|floatformat:2 }}</div>
+  </div>
+
+  <hr class="header-divider">
+
+  <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:10pt;">
+    <div>
+      <div style="margin-bottom:4px;">Odgovorno lice:</div>
+      <div style="margin-bottom:40px;">_______________________</div>
+      <div>M.P.</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="margin-bottom:4px;">Računovođa:</div>
+      <div>_______________________</div>
+    </div>
+  </div>
+
+  <div class="print-footer">
+    <span>MNM LOGIC — Sistem za upravljanje poslovanjem</span>
+    <span>Štampano: {% now "d.m.Y H:i" %}</span>
+  </div>
+
+</body>
+</html>

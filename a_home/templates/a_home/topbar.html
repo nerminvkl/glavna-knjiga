@@ -405,4 +405,13 @@ fetch('/postavke/pozadina/', {
 document.getElementById('wallpaper-modal').addEventListener('click', function(e) {
 if (e.target === this) this.classList.remove('open');
 });
+
+function toggleNav() {
+  const nav = document.getElementById('topbar-nav');
+  const btn = document.querySelector('.nav-hamburger');
+  nav.classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
 </script>
+

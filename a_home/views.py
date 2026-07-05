@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.utils import timezone
 from decimal import Decimal
 from datetime import date
+from django.db.models import Sum
 import json
 from django.contrib.auth import logout
 from django.contrib.auth import logout as auth_logout
@@ -16,7 +17,7 @@ from django.conf import settings as django_settings
 from .models import (
     Inventura, PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure, Zaposlenik, ObracunPlace, StavkaObracuna
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -1467,4 +1468,190 @@ def analitika_izvjestaj_print(request, partner_id):
         'konto_do': konto_do_str,
         'datum_od': datum_od,
         'datum_do': datum_do,
+    })
+
+from django.db.models import Sum
+
+# ── ZAPOSLENICI ───────────────────────────────────────────────────────────────
+@login_required
+def zaposlenici_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+
+    from django import forms
+    class ZaposlenikForm(forms.ModelForm):
+        class Meta:
+            model = Zaposlenik
+            fields = ['jmb','ime','prezime','adresa','sifra_opcine','pozicija','datum_zaposlenja','kf_licnog_odbitka','status']
+
+    edit_obj = None
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        edit_obj = get_object_or_404(Zaposlenik, id=edit_id, partner=partner)
+
+    if request.method == 'POST':
+        form = ZaposlenikForm(request.POST, instance=edit_obj)
+        if form.is_valid():
+            z = form.save(commit=False)
+            z.partner = partner
+            z.save()
+            return redirect('zaposlenici', partner_id=partner_id)
+    else:
+        form = ZaposlenikForm(instance=edit_obj)
+
+    lista = Zaposlenik.objects.filter(partner=partner)
+    return render(request, 'a_home/zaposlenici.html', {
+        'partner': partner,
+        'godina': godina,
+        'form': form,
+        'lista': lista,
+        'edit_obj': edit_obj,
+        'show_header': False,
+    })
+
+
+@login_required
+def zaposlenik_delete(request, pk):
+    z = get_object_or_404(Zaposlenik, pk=pk)
+    partner_id = z.partner_id
+    if request.method == 'POST':
+        z.delete()
+    return redirect('zaposlenici', partner_id=partner_id)
+
+
+# ── OBRAČUNI PLAĆA ─────────────────────────────────────────────────────────────
+@login_required
+def obracuni_placa_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    obracuni = ObracunPlace.objects.filter(
+        partner=partner, godina=godina
+    ).prefetch_related('stavke')
+
+    return render(request, 'a_home/obracuni_placa.html', {
+        'partner': partner,
+        'godina': godina,
+        'obracuni': obracuni,
+        'show_header': False,
+    })
+
+
+@login_required
+def novi_obracun_place(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+    if not godina:
+        return redirect('login')
+
+    if request.method == 'POST':
+        mjesec = int(request.POST.get('mjesec', 1))
+        naziv = request.POST.get('naziv', '')
+
+        obracun, created = ObracunPlace.objects.get_or_create(
+            partner=partner,
+            godina=godina,
+            mjesec=mjesec,
+            defaults={'naziv': naziv, 'kreirao': request.user}
+        )
+
+        if created:
+            # Auto-dodaj sve aktivne zaposlenike
+            for z in Zaposlenik.objects.filter(partner=partner, status='aktivan'):
+                StavkaObracuna.objects.create(
+                    obracun=obracun,
+                    zaposlenik=z,
+                    radni_sati=176,
+                )
+
+        return redirect('uredi_obracun_place', obracun_id=obracun.id)
+
+    import datetime
+    return render(request, 'a_home/novi_obracun_place.html', {
+        'partner': partner,
+        'godina': godina,
+        'mjeseci': range(1, 13),
+        'today': datetime.date.today(),
+        'show_header': False,
+    })
+
+
+@login_required
+def uredi_obracun_place(request, obracun_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner = obracun.partner
+    godina = obracun.godina
+    stavke = obracun.stavke.select_related('zaposlenik').all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update_stavka':
+            stavka_id = request.POST.get('stavka_id')
+            stavka = get_object_or_404(StavkaObracuna, id=stavka_id)
+            stavka.bruto_placa = request.POST.get('bruto_placa', 0) or 0
+            stavka.druge_koristi = request.POST.get('druge_koristi', 0) or 0
+            stavka.radni_sati = request.POST.get('radni_sati', 0) or 0
+            stavka.sati_bolovanja = request.POST.get('sati_bolovanja', 0) or 0
+            stavka.napomena = request.POST.get('napomena', '')
+            stavka.save()
+
+        elif action == 'dodaj_zaposlenika':
+            z_id = request.POST.get('zaposlenik_id')
+            z = get_object_or_404(Zaposlenik, id=z_id, partner=partner)
+            StavkaObracuna.objects.get_or_create(
+                obracun=obracun, zaposlenik=z,
+                defaults={'radni_sati': 176}
+            )
+
+        elif action == 'obrisi_stavku':
+            stavka_id = request.POST.get('stavka_id')
+            get_object_or_404(StavkaObracuna, id=stavka_id).delete()
+
+        elif action == 'zakljuci':
+            obracun.status = 'zakljucen'
+            obracun.save()
+
+        elif action == 'otvori':
+            obracun.status = 'nacrt'
+            obracun.save()
+
+        return redirect('uredi_obracun_place', obracun_id=obracun.id)
+
+    # Zaposlenici koji nisu u obračunu
+    vec_dodani = stavke.values_list('zaposlenik_id', flat=True)
+    dostupni_zaposlenici = Zaposlenik.objects.filter(
+        partner=partner, status='aktivan'
+    ).exclude(id__in=vec_dodani)
+
+    return render(request, 'a_home/uredi_obracun_place.html', {
+        'obracun': obracun,
+        'partner': partner,
+        'godina': godina,
+        'stavke': stavke,
+        'dostupni_zaposlenici': dostupni_zaposlenici,
+        'show_header': False,
+    })
+
+
+@login_required
+def obrisi_obracun_place(request, obracun_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner_id = obracun.partner_id
+    if request.method == 'POST':
+        obracun.delete()
+    return redirect('obracuni_placa', partner_id=partner_id)
+
+
+@login_required
+def print_obracun_place(request, obracun_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    stavke = obracun.stavke.select_related('zaposlenik').all()
+    return render(request, 'a_home/print_obracun_place.html', {
+        'obracun': obracun,
+        'partner': obracun.partner,
+        'godina': obracun.godina,
+        'stavke': stavke,
     })

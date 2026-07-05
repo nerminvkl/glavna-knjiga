@@ -100,6 +100,15 @@ urlpatterns = [
     path('inventura/<int:inventura_id>/uredi/', uredi_inventuru, name='uredi_inventuru'),
     path('inventura/<int:inventura_id>/obrisi/', obrisi_inventuru, name='obrisi_inventuru_gk'),
     path('inventura/<int:inventura_id>/print/', print_inventura, name='print_inventura'),
+
+    # obracun plata
+    path('glavna-knjiga/<int:partner_id>/zaposlenici/', zaposlenici_view, name='zaposlenici'),
+    path('zaposlenik/<int:pk>/obrisi/', zaposlenik_delete, name='zaposlenik_delete'),
+    path('glavna-knjiga/<int:partner_id>/place/', obracuni_placa_view, name='obracuni_placa'),
+    path('glavna-knjiga/<int:partner_id>/place/novi/', novi_obracun_place, name='novi_obracun_place'),
+    path('place/<int:obracun_id>/uredi/', uredi_obracun_place, name='uredi_obracun_place'),
+    path('place/<int:obracun_id>/obrisi/', obrisi_obracun_place, name='obrisi_obracun_place'),
+    path('place/<int:obracun_id>/print/', print_obracun_place, name='print_obracun_place'),
 ]
 
 if settings.DEBUG:

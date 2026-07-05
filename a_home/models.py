@@ -497,3 +497,125 @@ class KorisnickePostavke(models.Model):
 
     def __str__(self):
         return f"Postavke — {self.korisnik.username}"
+    
+
+# ─────────────────────────────────────────
+#  ZAPOSLENICI I OBRAČUN PLAĆA
+# ─────────────────────────────────────────
+
+class Zaposlenik(models.Model):
+    SPOL_CHOICES = [('M', 'Muški'), ('Z', 'Ženski')]
+    STATUS_CHOICES = [
+        ('aktivan', 'Aktivan'),
+        ('neaktivan', 'Neaktivan'),
+    ]
+
+    partner          = models.ForeignKey(PoslovniPartner, on_delete=models.CASCADE, related_name='zaposlenici', verbose_name="Firma")
+    jmb              = models.CharField(max_length=13, blank=True, verbose_name="JMB")
+    ime              = models.CharField(max_length=100, verbose_name="Ime")
+    prezime          = models.CharField(max_length=100, verbose_name="Prezime")
+    adresa           = models.CharField(max_length=255, blank=True, verbose_name="Adresa")
+    sifra_opcine     = models.CharField(max_length=10, blank=True, verbose_name="Šifra općine")
+    pozicija         = models.CharField(max_length=100, blank=True, verbose_name="Radno mjesto")
+    datum_zaposlenja = models.DateField(null=True, blank=True, verbose_name="Datum zaposlenja")
+    status           = models.CharField(max_length=10, choices=STATUS_CHOICES, default='aktivan', verbose_name="Status")
+    kf_licnog_odbitka = models.DecimalField(max_digits=4, decimal_places=2, default=1, verbose_name="Kf ličnog odbitka")
+    kreiran          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['prezime', 'ime']
+        verbose_name = "Zaposlenik"
+        verbose_name_plural = "Zaposlenici"
+
+    def __str__(self):
+        return f"{self.prezime} {self.ime}"
+
+    @property
+    def ime_prezime(self):
+        return f"{self.ime} {self.prezime}"
+
+
+class ObracunPlace(models.Model):
+    STATUS_CHOICES = [
+        ('nacrt', 'Nacrt'),
+        ('zakljucen', 'Zaključen'),
+    ]
+
+    partner     = models.ForeignKey(PoslovniPartner, on_delete=models.CASCADE, related_name='obracuni_placa', verbose_name="Firma")
+    godina      = models.ForeignKey(PoslovnaGodina, on_delete=models.PROTECT, verbose_name="Godina")
+    mjesec      = models.IntegerField(verbose_name="Mjesec")
+    naziv       = models.CharField(max_length=255, blank=True, verbose_name="Naziv")
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default='nacrt', verbose_name="Status")
+    kreirao     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Kreirao")
+    kreirano    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-godina__godina', '-mjesec']
+        unique_together = ('partner', 'godina', 'mjesec')
+        verbose_name = "Obračun plaća"
+        verbose_name_plural = "Obračuni plaća"
+
+    def __str__(self):
+        return f"{self.partner.naziv_1} — {self.mjesec:02d}/{self.godina.godina}"
+
+    @property
+    def ukupno_bruto(self):
+        return sum(s.bruto_placa for s in self.stavke.all())
+
+    @property
+    def ukupno_neto(self):
+        return sum(s.neto_za_isplatu for s in self.stavke.all())
+
+
+class StavkaObracuna(models.Model):
+    # FBiH konstante
+    STOPA_DOPRINOSA = Decimal('0.31')
+    STOPA_POREZA    = Decimal('0.10')
+    LICNI_ODBITAK   = Decimal('300.00')
+
+    obracun          = models.ForeignKey(ObracunPlace, on_delete=models.CASCADE, related_name='stavke', verbose_name="Obračun")
+    zaposlenik       = models.ForeignKey(Zaposlenik, on_delete=models.PROTECT, verbose_name="Zaposlenik")
+    radni_sati       = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Radni sati")
+    sati_bolovanja   = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Sati bolovanja")
+    bruto_placa      = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Bruto plaća")
+    druge_koristi    = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Druge koristi")
+    datum_isplate    = models.DateField(null=True, blank=True, verbose_name="Datum isplate")
+    napomena         = models.CharField(max_length=255, blank=True, verbose_name="Napomena")
+
+    class Meta:
+        unique_together = ('obracun', 'zaposlenik')
+        ordering = ['zaposlenik__prezime']
+        verbose_name = "Stavka obračuna"
+        verbose_name_plural = "Stavke obračuna"
+
+    def __str__(self):
+        return f"{self.zaposlenik} | {self.obracun}"
+
+    @property
+    def ukupno_bruto(self):
+        return self.bruto_placa + self.druge_koristi
+
+    @property
+    def doprinosi(self):
+        return (self.ukupno_bruto * self.STOPA_DOPRINOSA).quantize(Decimal('0.01'))
+
+    @property
+    def neto_placa(self):
+        return self.ukupno_bruto - self.doprinosi
+
+    @property
+    def licni_odbitak(self):
+        return self.LICNI_ODBITAK * self.zaposlenik.kf_licnog_odbitka
+
+    @property
+    def osnovica_poreza(self):
+        osnovica = self.neto_placa - self.licni_odbitak
+        return max(osnovica, Decimal('0'))
+
+    @property
+    def porez(self):
+        return (self.osnovica_poreza * self.STOPA_POREZA).quantize(Decimal('0.01'))
+
+    @property
+    def neto_za_isplatu(self):
+        return (self.neto_placa - self.porez).quantize(Decimal('0.01'))
