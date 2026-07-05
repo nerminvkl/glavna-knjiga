@@ -3141,3 +3141,215 @@ html, body {
   transition:background 0.15s;
 }
 .btn-xlsx:hover { background:rgba(52,211,153,0.2); }
+
+/* ── LOGIN MOBILE FIX ── */
+@media (max-width: 768px) {
+  .portal {
+    position: relative !important;
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .center {
+    position: relative !important;
+    min-height: 100vh !important;
+    padding: 20px 16px 40px !important;
+    align-items: flex-start !important;
+    padding-top: 80px !important;
+  }
+
+  .glass-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 16px !important;
+    padding: 28px 20px !important;
+  }
+
+  /* Sakrij sat na loginu — topbar ga ima */
+  .topbar .dt-time,
+  .topbar .dt-date {
+    display: none !important;
+  }
+
+  .topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    padding: 12px 16px !important;
+    background: rgba(10,20,40,0.85) !important;
+    backdrop-filter: blur(20px) !important;
+  }
+
+  /* ── DASHBOARD SCROLL FIX ── */
+  html {
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  body {
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+
+  .gk-page {
+    position: relative !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 80px 12px 60px !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+  }
+
+  .gk-modules {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: 40px !important;
+  }
+
+  .gk-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    max-width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+
+  .gk-title {
+    font-size: 20px !important;
+  }
+
+  .gk-meta {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .gk-back-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .gk-card {
+    width: 100% !important;
+  }
+
+  /* UP-PAGE scroll fix */
+  .up-page {
+    position: relative !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 80px 12px 60px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-panel {
+    padding: 24px 16px !important;
+  }
+
+  .panel-title {
+    font-size: 20px !important;
+  }
+
+  .login-btn {
+    padding: 14px !important;
+    font-size: 15px !important;
+  }
+
+  .gk-page {
+    padding: 72px 10px 50px !important;
+  }
+}
+
+.topbar-time-login {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .topbar-time-login {
+    display: none !important;
+  }
+}
+/* DASHBOARD SCROLL NUCLEAR FIX */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto !important;
+    height: auto !important;
+    position: static !important;
+  }
+
+  .portal {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .bg-img {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+  }
+
+  .gk-page {
+    position: relative !important;
+    z-index: 10 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 80px 12px 80px !important;
+    justify-content: flex-start !important;
+  }
+
+  .gk-modules {
+    grid-template-columns: 1fr !important;
+    padding-bottom: 40px !important;
+  }
+}
+
+/* OBRAČUNI PLAĆA MOBILE FIX */
+@media (max-width: 768px) {
+  .up-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .up-header > div:last-child {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .up-firm-badge {
+    flex-wrap: wrap !important;
+  }
+
+  .up-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+
+  .up-table-card {
+    min-width: 600px !important;
+  }
+}
