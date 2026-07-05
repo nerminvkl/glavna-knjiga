@@ -38,6 +38,7 @@ urlpatterns = [
     path('godine/',                godine,        name='godine'),
     path('godine/edit/<int:edit_id>/', godine,    name='godina_edit'),
     path('godine/delete/<int:pk>/',    godina_delete, name='godina_delete'),
+    path('glavna-knjiga/<int:partner_id>/partneri-firme/', partneri_firme_view, name='partneri_firme'),
 
     # Partneri
     path('partneri/',                    partneri,       name='partneri'),
@@ -79,7 +80,7 @@ urlpatterns = [
     path('kalkulacija/<int:kalk_id>/dodaj-stavku/', dodaj_stavku_kalk, name='dodaj_stavku_kalk'),
     path('kalkulacija/stavka/<int:stavka_id>/obrisi/', obrisi_stavku_kalk, name='obrisi_stavku_kalk'),
     path('kalkulacija/<int:kalk_id>/print/', print_kalkulacija, name='print_kalkulacija'),
-    path('api/partneri/search/', partneri_search_api, name='partneri_search_api'),
+    path('api/<int:partner_id>/partneri-firme/search/', partneri_firme_search_api, name='partneri_firme_search_api'),
     path('api/artikli/search/', artikli_search_api, name='artikli_search_api'),
     path('kalkulacija/<int:pk>/obrisi/', obrisi_kalkulaciju, name='obrisi_kalkulaciju'),
     path('kalkulacija/<int:kalk_id>/zakljuci/', zakljuci_kalkulaciju, name='zakljuci_kalkulaciju'),
@@ -109,6 +110,7 @@ urlpatterns = [
     path('place/<int:obracun_id>/uredi/', uredi_obracun_place, name='uredi_obracun_place'),
     path('place/<int:obracun_id>/obrisi/', obrisi_obracun_place, name='obrisi_obracun_place'),
     path('place/<int:obracun_id>/print/', print_obracun_place, name='print_obracun_place'),
+    path('place/<int:obracun_id>/xlsx/', export_obracun_place_xlsx, name='export_obracun_place_xlsx'),
 ]
 
 if settings.DEBUG:

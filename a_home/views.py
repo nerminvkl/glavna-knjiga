@@ -17,7 +17,7 @@ from django.conf import settings as django_settings
 from .models import (
     Inventura, PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure, Zaposlenik, ObracunPlace, StavkaObracuna
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure, Zaposlenik, ObracunPlace, StavkaObracuna, PartnerFirme
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -1480,6 +1480,16 @@ def zaposlenici_view(request, partner_id):
 
     from django import forms
     class ZaposlenikForm(forms.ModelForm):
+        kf_licnog_odbitka = forms.DecimalField(
+            min_value=0,
+            decimal_places=2,
+            max_digits=4,
+            required=False,
+        )
+        datum_zaposlenja = forms.DateField(
+            required=False,
+            widget=forms.DateInput(attrs={'type': 'date'}),
+        )
         class Meta:
             model = Zaposlenik
             fields = ['jmb','ime','prezime','adresa','sifra_opcine','pozicija','datum_zaposlenja','kf_licnog_odbitka','status']
@@ -1494,6 +1504,23 @@ def zaposlenici_view(request, partner_id):
         if form.is_valid():
             z = form.save(commit=False)
             z.partner = partner
+            # Direktno iz POST-a da bi 0 bio prihvaćen
+            from decimal import Decimal
+            kf_raw = request.POST.get('kf_licnog_odbitka', '').strip()
+            try:
+                z.kf_licnog_odbitka = Decimal(kf_raw)
+            except:
+                z.kf_licnog_odbitka = Decimal('1')
+            # Datum
+            datum_raw = request.POST.get('datum_zaposlenja', '').strip()
+            if datum_raw:
+                from datetime import date
+                try:
+                    z.datum_zaposlenja = date.fromisoformat(datum_raw)
+                except:
+                    z.datum_zaposlenja = None
+            else:
+                z.datum_zaposlenja = None
             z.save()
             return redirect('zaposlenici', partner_id=partner_id)
     else:
@@ -1655,3 +1682,249 @@ def print_obracun_place(request, obracun_id):
         'godina': obracun.godina,
         'stavke': stavke,
     })
+
+@login_required
+def partneri_firme_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'dodaj':
+            globalni_id = request.POST.get('globalni_partner_id')
+            if globalni_id:
+                gp = get_object_or_404(PoslovniPartner, id=globalni_id)
+                PartnerFirme.objects.get_or_create(firma=partner, partner=gp)
+
+        elif action == 'ukloni':
+            pf_id = request.POST.get('partner_firme_id')
+            get_object_or_404(PartnerFirme, id=pf_id, firma=partner).delete()
+
+        elif action == 'toggle':
+            pf_id = request.POST.get('partner_firme_id')
+            pf = get_object_or_404(PartnerFirme, id=pf_id, firma=partner)
+            pf.aktivan = not pf.aktivan
+            pf.save()
+
+        return redirect('partneri_firme', partner_id=partner_id)
+
+    partneri_firme = PartnerFirme.objects.filter(
+        firma=partner
+    ).select_related('partner').order_by('partner__sifra')
+
+    vec_dodani = partneri_firme.values_list('partner_id', flat=True)
+    dostupni = PoslovniPartner.objects.exclude(
+        id__in=vec_dodani
+    ).exclude(id=partner_id).order_by('sifra')
+
+    return render(request, 'a_home/partneri_firme.html', {
+        'partner': partner,
+        'godina': godina,
+        'partneri_firme': partneri_firme,
+        'dostupni': dostupni,
+        'show_header': False,
+    })
+
+@login_required
+def partneri_firme_search_api(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    q = request.GET.get('q', '')
+
+    if not q:
+        return JsonResponse({'results': []})
+
+    partneri = PartnerFirme.objects.filter(
+        firma=partner,
+        aktivan=True
+    ).filter(
+        Q(partner__naziv_1__icontains=q) |
+        Q(partner__sifra__icontains=q)
+    ).select_related('partner')[:10]
+
+    results = [{
+        'id': pf.partner.id,
+        'sifra': pf.partner.sifra,
+        'naziv': pf.partner.naziv_1,
+    } for pf in partneri]
+
+    return JsonResponse({'results': results})
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+
+@login_required
+def export_obracun_place_xlsx(request, obracun_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner = obracun.partner
+    stavke = obracun.stavke.select_related('zaposlenik').all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "ObrPlaceZapFBiH"
+
+    # Stilovi
+    header_font = Font(bold=True, size=10)
+    title_font = Font(bold=True, size=11)
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left = Alignment(horizontal='left', vertical='center')
+    right = Alignment(horizontal='right', vertical='center')
+
+    yellow_fill = PatternFill("solid", fgColor="FFFF00")
+    blue_fill = PatternFill("solid", fgColor="BDD7EE")
+    header_fill = PatternFill("solid", fgColor="D9E1F2")
+
+    thin = Side(style='thin')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    def cell(ws, row, col, value, font=None, fill=None, alignment=None, number_format=None):
+        c = ws.cell(row=row, column=col, value=value)
+        if font: c.font = font
+        if fill: c.fill = fill
+        if alignment: c.alignment = alignment
+        if number_format: c.number_format = number_format
+        c.border = border
+        return c
+
+    # ROW 1 - Firma
+    ws.merge_cells('A1:N1')
+    c = ws['A1']
+    c.value = partner.naziv_1
+    c.font = Font(bold=True, size=12)
+    c.alignment = left
+
+    # ROW 2 - Adresa
+    ws.merge_cells('A2:N2')
+    c = ws['A2']
+    c.value = f"{partner.ptt} {partner.mjesto}"
+    c.alignment = left
+
+    # ROW 3 - Naslov
+    ws.merge_cells('A3:N3')
+    c = ws['A3']
+    c.value = f"Pregled obračunatih plaća zaposlenika za mjesec {obracun.mjesec:02d}/{obracun.godina.godina}"
+    c.font = Font(bold=True, size=11)
+    c.alignment = center
+
+    # ROW 4 - Prazno
+
+    # ROW 5 - Header red 1
+    headers_row1 = [
+        '', 'Ime i prezime', 'Faktor ličnog odbitka prema poreznoj kartici',
+        'NETO PLAĆA u KM (isplata + porez)',
+        'BRUTO PLAĆA u KM',
+        'BRUTO PLAĆA u KM (4 X 1,449275)',
+        'U K U P N O BRUTO PLAĆA',
+        'Ukupna stopa za doprinose',
+        'Ukupni doprinosi (kolone 7 X 8 / 100)',
+        'Neto plaća (kolona 7 - 9)',
+        'Iznos ličnog odbitka (kolona 3 x 300 KM)',
+        'Osnovica poreza (kolona 10-11)',
+        'Iznos poreza (kolona 12 x 0,1)',
+        'Iznos plaće za isplatu (kolona 10-13)',
+    ]
+
+    col_widths = [4, 20, 8, 12, 12, 14, 12, 8, 12, 12, 12, 12, 10, 12]
+
+    for i, (header, width) in enumerate(zip(headers_row1, col_widths), 1):
+        c = cell(ws, 5, i, header, font=Font(bold=True, size=9), fill=header_fill, alignment=center)
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # ROW 6 - Brojevi kolona
+    for i in range(1, 15):
+        label = str(i) if i > 1 else ''
+        cell(ws, 6, i, label, font=Font(bold=True, size=9), fill=header_fill, alignment=center)
+
+    # ROW 7 - UKUPNO
+    cell(ws, 7, 1, 'UKUPNO:', font=Font(bold=True, size=9), alignment=right)
+    cell(ws, 7, 2, '', font=header_font, alignment=center)
+
+    # Formule za ukupno (popunit ćemo nakon stavki)
+    ukupno_row = 7
+    data_start = 8
+
+    # DATA ROWS
+    for idx, stavka in enumerate(stavke):
+        row = data_start + idx
+        z = stavka.zaposlenik
+
+        cell(ws, row, 1, idx + 1, alignment=center)
+        cell(ws, row, 2, f"{z.prezime} {z.ime}", alignment=left)
+        cell(ws, row, 3, float(z.kf_licnog_odbitka), alignment=center, number_format='0.00')
+        cell(ws, row, 4, 0, alignment=right, number_format='#,##0.00')  # Neto KM - prazno
+        cell(ws, row, 5, float(stavka.bruto_placa), fill=blue_fill, alignment=right, number_format='#,##0.00')
+        # Kolona 6 = Bruto KM (prazno ako nema)
+        cell(ws, row, 6, 0, alignment=right, number_format='#,##0.00')
+        # Kolona 7 = Ukupno bruto = E + F
+        ws.cell(row=row, column=7).value = f'=E{row}+F{row}'
+        ws.cell(row=row, column=7).font = Font(bold=True, size=9)
+        ws.cell(row=row, column=7).number_format = '#,##0.00'
+        ws.cell(row=row, column=7).alignment = right
+        ws.cell(row=row, column=7).border = border
+        # Stopa doprinosa
+        cell(ws, row, 8, 31, alignment=center, number_format='0')
+        # Doprinosi = G * H / 100
+        ws.cell(row=row, column=9).value = f'=G{row}*H{row}/100'
+        ws.cell(row=row, column=9).number_format = '#,##0.00'
+        ws.cell(row=row, column=9).alignment = right
+        ws.cell(row=row, column=9).border = border
+        # Neto plaća = G - I
+        ws.cell(row=row, column=10).value = f'=G{row}-I{row}'
+        ws.cell(row=row, column=10).number_format = '#,##0.00'
+        ws.cell(row=row, column=10).alignment = right
+        ws.cell(row=row, column=10).border = border
+        # Lični odbitak = C * 300
+        ws.cell(row=row, column=11).value = f'=C{row}*300'
+        ws.cell(row=row, column=11).number_format = '#,##0.00'
+        ws.cell(row=row, column=11).alignment = right
+        ws.cell(row=row, column=11).border = border
+        # Osnovica poreza = J - K
+        ws.cell(row=row, column=12).value = f'=MAX(J{row}-K{row},0)'
+        ws.cell(row=row, column=12).number_format = '#,##0.00'
+        ws.cell(row=row, column=12).alignment = right
+        ws.cell(row=row, column=12).border = border
+        # Porez = L * 0.1
+        ws.cell(row=row, column=13).value = f'=L{row}*0.1'
+        ws.cell(row=row, column=13).number_format = '#,##0.00'
+        ws.cell(row=row, column=13).alignment = right
+        ws.cell(row=row, column=13).border = border
+        # Za isplatu = J - M
+        ws.cell(row=row, column=14).value = f'=J{row}-M{row}'
+        ws.cell(row=row, column=14).number_format = '#,##0.00'
+        ws.cell(row=row, column=14).alignment = right
+        ws.cell(row=row, column=14).fill = PatternFill("solid", fgColor="E2EFDA")
+        ws.cell(row=row, column=14).font = Font(bold=True, size=9)
+        ws.cell(row=row, column=14).border = border
+
+    # UKUPNO formule
+    last_row = data_start + len(stavke) - 1
+    if stavke:
+        for col in [4, 5, 6, 7, 9, 10, 11, 12, 13, 14]:
+            col_letter = get_column_letter(col)
+            ws.cell(row=ukupno_row, column=col).value = f'=SUM({col_letter}{data_start}:{col_letter}{last_row})'
+            ws.cell(row=ukupno_row, column=col).font = Font(bold=True, size=9)
+            ws.cell(row=ukupno_row, column=col).number_format = '#,##0.00'
+            ws.cell(row=ukupno_row, column=col).alignment = right
+            ws.cell(row=ukupno_row, column=col).fill = yellow_fill
+            ws.cell(row=ukupno_row, column=col).border = border
+
+    # Row heights
+    ws.row_dimensions[5].height = 60
+    ws.row_dimensions[3].height = 20
+
+    # Footer
+    footer_row = last_row + 3 if stavke else data_start + 2
+    ws.merge_cells(f'A{footer_row}:N{footer_row}')
+    ws[f'A{footer_row}'].value = "MNM Logic Velika Kladuša - 061 850 208"
+    ws[f'A{footer_row}'].alignment = center
+    ws[f'A{footer_row}'].font = Font(italic=True, size=9)
+
+    # HTTP response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="obracun_placa_{obracun.mjesec:02d}_{obracun.godina.godina}.xlsx"'
+    wb.save(response)
+    return response

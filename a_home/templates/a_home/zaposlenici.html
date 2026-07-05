@@ -64,10 +64,12 @@
                 style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:monospace !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
             </div>
             <div style="display:flex; flex-direction:column; gap:5px; flex:1;">
-              <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">KF LIČNOG ODBITKA</label>
-              <input type="number" name="kf_licnog_odbitka" value="{{ form.kf_licnog_odbitka.value|default:'1' }}" step="0.01" min="0"
-                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:monospace !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
-            </div>
+  <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">KF LIČNOG ODBITKA</label>
+  <input type="number" name="kf_licnog_odbitka"
+    value="{% if edit_obj %}{{ edit_obj.kf_licnog_odbitka }}{% else %}1{% endif %}"
+    step="0.01" min="0"
+    style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:monospace !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+</div>
           </div>
           <div style="display:flex; flex-direction:column; gap:5px;">
             <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">RADNO MJESTO</label>
@@ -76,10 +78,11 @@
           </div>
           <div style="display:flex; gap:10px;">
             <div style="display:flex; flex-direction:column; gap:5px; flex:1;">
-              <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">DATUM ZAPOSLENJA</label>
-              <input type="date" name="datum_zaposlenja" value="{{ form.datum_zaposlenja.value|default:'' }}"
-                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
-            </div>
+  <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">DATUM ZAPOSLENJA</label>
+  <input type="date" name="datum_zaposlenja"
+    value="{% if edit_obj and edit_obj.datum_zaposlenja %}{{ edit_obj.datum_zaposlenja|date:'Y-m-d' }}{% endif %}"
+    style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+</div>
             <div style="display:flex; flex-direction:column; gap:5px; flex:1;">
               <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">STATUS</label>
               <select name="status"

@@ -63,6 +63,14 @@ class PoslovniPartner(models.Model):
     kreiran            = models.DateTimeField(auto_now_add=True)
     izmijenjen         = models.DateTimeField(auto_now=True)
 
+    firma = models.ForeignKey(
+        'PoslovniPartner',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='partneri_firme',
+        verbose_name="Pripada firmi"
+    )
+
     class Meta:
         ordering = ['sifra']
         verbose_name = "Poslovni partner"
@@ -70,6 +78,30 @@ class PoslovniPartner(models.Model):
 
     def __str__(self):
         return f"{self.sifra} — {self.naziv_1}"
+    
+class PartnerFirme(models.Model):
+    firma = models.ForeignKey(
+        'PoslovniPartner',
+        on_delete=models.CASCADE,
+        related_name='kao_firma',
+        verbose_name="Firma"
+    )
+    partner = models.ForeignKey(
+        'PoslovniPartner',
+        on_delete=models.CASCADE,
+        related_name='kao_partner_firme',
+        verbose_name="Partner"
+    )
+    aktivan = models.BooleanField(default=True, verbose_name="Aktivan")
+    kreiran = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('firma', 'partner')
+        verbose_name = "Partner firme"
+        verbose_name_plural = "Partneri firme"
+
+    def __str__(self):
+        return f"{self.partner.naziv_1}"
 
 
 class Porez(models.Model):

@@ -24,56 +24,57 @@
       </div>
     </div>
 
-    <div class="up-table-wrap">
-      <div class="up-table-card">
-        <div class="up-table-head">
-          <div class="up-th" style="width:80px;">MJESEC</div>
-          <div class="up-th" style="flex:1;">NAZIV</div>
-          <div class="up-th" style="width:80px; text-align:center;">ZAPOSLENIH</div>
-          <div class="up-th up-th-num" style="width:130px;">UKUPNO BRUTO</div>
-          <div class="up-th up-th-num" style="width:130px;">UKUPNO NETO</div>
-          <div class="up-th" style="width:90px;">STATUS</div>
-          <div class="up-th" style="width:150px;"></div>
-        </div>
+   <div class="up-table-wrap">
+  <div class="up-table-card">
+    <div class="up-table-head">
+      <div class="up-th" style="width:80px;">MJESEC</div>
+      <div class="up-th" style="flex:1;">NAZIV</div>
+      <div class="up-th" style="width:80px; text-align:center;">ZAPOSLENIH</div>
+      <div class="up-th up-th-num" style="width:130px;">UKUPNO BRUTO</div>
+      <div class="up-th up-th-num" style="width:130px;">UKUPNO NETO</div>
+      <div class="up-th" style="width:90px;">STATUS</div>
+      <div class="up-th" style="width:150px;"></div>
+    </div>
 
-        {% for ob in obracuni %}
-        <div class="up-row">
-          <div class="up-td" style="width:80px;">
-            <span class="up-konto-badge">{{ ob.mjesec|stringformat:"02d" }}/{{ ob.godina.godina }}</span>
-          </div>
-          <div class="up-td" style="flex:1;">
-            <div class="up-opis-main">{{ ob.naziv|default:"Obračun plaća" }}</div>
-          </div>
-          <div class="up-td" style="width:80px; text-align:center; color:rgba(255,255,255,0.5); font-size:13px;">
-            {{ ob.stavke.count }}
-          </div>
-          <div class="up-td up-td-num" style="width:130px;">
-            <span class="up-amount up-amount-d">{{ ob.ukupno_bruto|floatformat:2 }}</span>
-          </div>
-          <div class="up-td up-td-num" style="width:130px;">
-            <span class="up-amount up-amount-p">{{ ob.ukupno_neto|floatformat:2 }}</span>
-          </div>
-          <div class="up-td" style="width:90px;">
-            {% if ob.status == 'zakljucen' %}
-            <span class="badge-inactive">Zaključen</span>
-            {% else %}
-            <span class="badge-active">Nacrt</span>
-            {% endif %}
-          </div>
-          <div class="up-td akcije" style="width:150px;">
-            <a href="{% url 'uredi_obracun_place' ob.id %}" class="btn-edit">Uredi</a>
-            <a href="{% url 'print_obracun_place' ob.id %}" target="_blank" class="btn-print">🖨</a>
-            <form method="post" action="{% url 'obrisi_obracun_place' ob.id %}" style="display:inline;" onsubmit="return confirm('Obrisati obračun?')">
-              {% csrf_token %}
-              <button type="submit" class="btn-delete">Obriši</button>
-            </form>
-          </div>
-        </div>
-        {% empty %}
-        <div class="up-empty">Nema obračuna. Kreirajte prvi klikom na "+ Novi obračun".</div>
-        {% endfor %}
+    {% for ob in obracuni %}
+    <div class="up-row">
+      <div class="up-td" style="width:80px;">
+        <span class="up-konto-badge">{{ ob.mjesec|stringformat:"02d" }}/{{ ob.godina.godina }}</span>
+      </div>
+      <div class="up-td" style="flex:1;">
+        <div class="up-opis-main">{{ ob.naziv|default:"Obračun plaća" }}</div>
+      </div>
+      <div class="up-td" style="width:80px; text-align:center; color:rgba(255,255,255,0.5); font-size:13px;">
+        {{ ob.stavke.count }}
+      </div>
+      <div class="up-td up-td-num" style="width:130px;">
+        <span class="up-amount up-amount-d">{{ ob.ukupno_bruto|floatformat:2 }}</span>
+      </div>
+      <div class="up-td up-td-num" style="width:130px;">
+        <span class="up-amount up-amount-p">{{ ob.ukupno_neto|floatformat:2 }}</span>
+      </div>
+      <div class="up-td" style="width:90px;">
+        {% if ob.status == 'zakljucen' %}
+        <span class="badge-inactive">Zaključen</span>
+        {% else %}
+        <span class="badge-active">Nacrt</span>
+        {% endif %}
+      </div>
+      <div class="up-td akcije" style="width:200px;">
+        <a href="{% url 'uredi_obracun_place' ob.id %}" class="btn-edit">Uredi</a>
+        <a href="{% url 'print_obracun_place' ob.id %}" target="_blank" class="btn-print">🖨</a>
+       <a href="{% url 'export_obracun_place_xlsx' ob.id %}" class="btn-print" style="color:#34d399; background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.2);">📊</a>
+        <form method="post" action="{% url 'obrisi_obracun_place' ob.id %}" style="display:inline;" onsubmit="return confirm('Obrisati obračun?')">
+          {% csrf_token %}
+          <button type="submit" class="btn-delete">Obriši</button>
+        </form>
       </div>
     </div>
+    {% empty %}
+    <div class="up-empty">Nema obračuna. Kreirajte prvi klikom na "+ Novi obračun".</div>
+    {% endfor %}
+  </div>
+  </div>
   </div>
 </div>
 

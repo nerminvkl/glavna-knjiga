@@ -26,6 +26,7 @@
           style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 18px; border-radius:9px; font-size:13px; text-decoration:none;">
           🖨 Štampaj
         </a>
+        <a href="{% url 'export_obracun_place_xlsx' obracun.id %}" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); padding:9px 18px; border-radius:9px; font-size:13px; text-decoration:none;">📊 Excel</a>
         {% if obracun.status != 'zakljucen' %}
         <form method="post" onsubmit="return confirm('Zaključiti obračun?')">
           {% csrf_token %}

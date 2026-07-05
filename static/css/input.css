@@ -1751,3 +1751,37 @@
   border: 1px solid rgba(22,163,74,0.3);
   cursor: default;
 }
+
+.up-table-card { 
+  background:rgba(255,255,255,0.05); 
+  border:1px solid rgba(255,255,255,0.09); 
+  border-radius:14px; 
+  /* min-width:800px; ← UKLONITE OVO */
+  width: 100%;
+}
+
+.btn-xlsx { 
+  background:rgba(52,211,153,0.1); 
+  color:#34d399; 
+  border:1px solid rgba(52,211,153,0.2); 
+  border-radius:7px; 
+  padding:5px 10px; 
+  font-size:13px; 
+  text-decoration:none; 
+  display:inline-block; 
+}
+.btn-xlsx:hover { background:rgba(52,211,153,0.2); }
+
+.btn-xlsx {
+  background:rgba(52,211,153,0.1);
+  color:#34d399;
+  border:1px solid rgba(52,211,153,0.2);
+  border-radius:7px;
+  padding:5px 10px;
+  font-size:13px;
+  text-decoration:none;
+  display:inline-block;
+  line-height:1;
+  transition:background 0.15s;
+}
+.btn-xlsx:hover { background:rgba(52,211,153,0.2); }

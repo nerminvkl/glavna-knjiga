@@ -3127,3 +3127,17 @@ html, body {
   height: 100% !important;
   z-index: 1 !important;
 }
+
+.btn-xlsx {
+  background:rgba(52,211,153,0.1);
+  color:#34d399;
+  border:1px solid rgba(52,211,153,0.2);
+  border-radius:7px;
+  padding:5px 10px;
+  font-size:13px;
+  text-decoration:none;
+  display:inline-block;
+  line-height:1;
+  transition:background 0.15s;
+}
+.btn-xlsx:hover { background:rgba(52,211,153,0.2); }
