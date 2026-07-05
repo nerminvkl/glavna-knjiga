@@ -34,6 +34,8 @@ urlpatterns = [
     path('knjiga/<int:knjiga_id>/zakljuci/', zakljuci_godinu, name='zakljuci_godinu'),
     path('prenos-stanja/', prenesi_stanje, name='prenesi_stanje'),
     path('inventura/<int:inventura_id>/zakljuci/', zakljuci_inventuru, name='zakljuci_inventuru'),
+    path('glavna-knjiga/<int:partner_id>/zaposlenici/print/', print_zaposlenici, name='print_zaposlenici'),
+    
     # Godine
     path('godine/',                godine,        name='godine'),
     path('godine/edit/<int:edit_id>/', godine,    name='godina_edit'),

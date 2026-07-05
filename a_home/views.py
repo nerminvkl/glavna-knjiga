@@ -1481,10 +1481,7 @@ def zaposlenici_view(request, partner_id):
     from django import forms
     class ZaposlenikForm(forms.ModelForm):
         kf_licnog_odbitka = forms.DecimalField(
-            min_value=0,
-            decimal_places=2,
-            max_digits=4,
-            required=False,
+            min_value=0, decimal_places=2, max_digits=4, required=False,
         )
         datum_zaposlenja = forms.DateField(
             required=False,
@@ -1504,14 +1501,12 @@ def zaposlenici_view(request, partner_id):
         if form.is_valid():
             z = form.save(commit=False)
             z.partner = partner
-            # Direktno iz POST-a da bi 0 bio prihvaćen
             from decimal import Decimal
             kf_raw = request.POST.get('kf_licnog_odbitka', '').strip()
             try:
                 z.kf_licnog_odbitka = Decimal(kf_raw)
             except:
                 z.kf_licnog_odbitka = Decimal('1')
-            # Datum
             datum_raw = request.POST.get('datum_zaposlenja', '').strip()
             if datum_raw:
                 from datetime import date
@@ -1526,16 +1521,39 @@ def zaposlenici_view(request, partner_id):
     else:
         form = ZaposlenikForm(instance=edit_obj)
 
+    filter_status = request.GET.get('filter', 'svi')
     lista = Zaposlenik.objects.filter(partner=partner)
+    if filter_status == 'aktivni':
+        lista = lista.filter(status='aktivan')
+    elif filter_status == 'neaktivni':
+        lista = lista.filter(status='neaktivan')
+    lista = lista.order_by('prezime', 'ime')
+
     return render(request, 'a_home/zaposlenici.html', {
         'partner': partner,
         'godina': godina,
         'form': form,
         'lista': lista,
         'edit_obj': edit_obj,
+        'filter_status': filter_status,
         'show_header': False,
     })
 
+@login_required
+def print_zaposlenici(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    filter_status = request.GET.get('filter', 'svi')
+    lista = Zaposlenik.objects.filter(partner=partner)
+    if filter_status == 'aktivni':
+        lista = lista.filter(status='aktivan')
+    elif filter_status == 'neaktivni':
+        lista = lista.filter(status='neaktivan')
+    lista = lista.order_by('prezime', 'ime')
+    return render(request, 'a_home/print_zaposlenici.html', {
+        'partner': partner,
+        'lista': lista,
+        'filter_status': filter_status,
+    })
 
 @login_required
 def zaposlenik_delete(request, pk):
