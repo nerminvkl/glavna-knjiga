@@ -52,6 +52,7 @@ class PoslovniPartner(models.Model):
     # Registracija
     maticni_broj       = models.CharField(max_length=20, blank=True, verbose_name="Matični broj")
     porezni_broj       = models.CharField(max_length=20, blank=True, verbose_name="Porezni broj")
+    pdv_broj            = models.CharField(max_length=12, blank=True, verbose_name="PDV broj")
     broj_upisa_sud_reg = models.CharField(max_length=50, blank=True, verbose_name="Br. upisa u sud. reg.")
 
     # PDV i entitet

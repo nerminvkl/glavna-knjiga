@@ -28,6 +28,7 @@ class PoslovniPartnerForm(forms.ModelForm):
             'ziro_racun':          forms.TextInput(attrs={'placeholder': '1234567890123456'}),
             'sifra_sjedista':      forms.TextInput(attrs={'placeholder': 'Šifra sjedišta'}),
             'sinteticki_konto':    forms.TextInput(attrs={'placeholder': 'npr. 2000'}),
+            'pdv_broj':            forms.TextInput(attrs={'placeholder': 'PDV broj'}),
             'maticni_broj':        forms.TextInput(attrs={'placeholder': 'Matični broj'}),
             'porezni_broj':        forms.TextInput(attrs={'placeholder': 'Porezni/JIB broj'}),
             'broj_upisa_sud_reg':  forms.TextInput(attrs={'placeholder': 'Broj upisa u sud. reg.'}),
