@@ -812,6 +812,30 @@ def obrisi_kalkulaciju(request, pk):
         kalk.delete()
     return redirect('kalkulacije', partner_id=partner_id)
 
+@login_required
+def partneri_firme_search(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    q = request.GET.get('q', '')
+    
+    if not q:
+        return JsonResponse({'results': []})
+
+    partneri = PartnerFirme.objects.filter(
+        firma=partner,
+        aktivan=True
+    ).filter(
+        Q(partner__naziv_1__icontains=q) |
+        Q(partner__sifra__icontains=q)
+    ).select_related('partner')[:10]
+
+    results = [{
+        'id': pf.partner.id,
+        'sifra': pf.partner.sifra,
+        'naziv': pf.partner.naziv_1,
+    } for pf in partneri]
+
+    return JsonResponse({'results': results})
+
 
 # ── ZAKLJUČIVANJE / INVENTURA ────────────────────────────────────────────────
 

@@ -35,7 +35,7 @@ urlpatterns = [
     path('prenos-stanja/', prenesi_stanje, name='prenesi_stanje'),
     path('inventura/<int:inventura_id>/zakljuci/', zakljuci_inventuru, name='zakljuci_inventuru'),
     path('glavna-knjiga/<int:partner_id>/zaposlenici/print/', print_zaposlenici, name='print_zaposlenici'),
-    
+
     # Godine
     path('godine/',                godine,        name='godine'),
     path('godine/edit/<int:edit_id>/', godine,    name='godina_edit'),
@@ -86,6 +86,7 @@ urlpatterns = [
     path('api/artikli/search/', artikli_search_api, name='artikli_search_api'),
     path('kalkulacija/<int:pk>/obrisi/', obrisi_kalkulaciju, name='obrisi_kalkulaciju'),
     path('kalkulacija/<int:kalk_id>/zakljuci/', zakljuci_kalkulaciju, name='zakljuci_kalkulaciju'),
+    path('api/<int:partner_id>/partneri-firme/search/', partneri_firme_search, name='partneri_firme_search'),
 
     # maloprodaja maticni podaci
     path('maloprodaja/grupe-artikala/', grupe_artikala_view, name='grupe_artikala'),

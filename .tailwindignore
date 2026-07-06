@@ -1,0 +1,16 @@
+**/*.py
+**/*.txt
+**/*.md
+.venv/
+node_modules/
+staticfiles/
+_core/
+a_home/
+a_users/
+.venv/
+staticfiles/
+*.py
+*.txt
+*.md
+*.cfg
+*.ini

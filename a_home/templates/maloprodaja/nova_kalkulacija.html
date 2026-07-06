@@ -184,6 +184,41 @@
 </style>
 
 <script>
+
+const partnerId = {{ partner.id }};
+
+function searchPartner(tip, val) {
+  clearTimeout(partnerTimer);
+  const dropdown = document.getElementById(`${tip}-dropdown`);
+  const input = document.getElementById(`${tip}-search`);
+
+  if (val.length < 1) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  partnerTimer = setTimeout(() => {
+    fetch(`/api/${partnerId}/partneri-firme/search/?q=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.results || data.results.length === 0) {
+          dropdown.style.display = 'none';
+          return;
+        }
+        const rect = input.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+        dropdown.innerHTML = data.results.map(p => `
+          <div class="kalk-dropdown-item" onclick="odaberiPartnera('${tip}', ${p.id}, '${p.sifra}', '${p.naziv.replace(/'/g,"\\'")}')">
+            <span class="kalk-sifra">${p.sifra}</span>
+            <span class="kalk-naziv">${p.naziv}</span>
+          </div>`).join('');
+        dropdown.style.display = 'block';
+      });
+  }, 200);
+}
+
 let partnerTimer = null;
 
 function searchPartner(tip, val) {
@@ -194,7 +229,7 @@ function searchPartner(tip, val) {
   if (val.length < 1) { dropdown.style.display = 'none'; return; }
 
   partnerTimer = setTimeout(() => {
-    fetch(`/api/partneri/search/?q=${encodeURIComponent(val)}`)
+    fetch(`/partneri/search/?q=${encodeURIComponent(val)}&firma=${partnerId}`)
       .then(r => r.json())
       .then(data => {
         const rect = input.getBoundingClientRect();
