@@ -18,7 +18,7 @@
   </div>
 </div>
 <div class="field">
-  <label>NAZIV PARTNERA</label>
+  <label>NAZIV PARTNERA 2</label>
   {{ form.naziv_2 }}
 </div>
 
@@ -67,6 +67,16 @@
 </div>
 
 <div class="form-section">Registracija</div>
+<div class="field-row">
+  <div class="field">
+    <label>JIB/JMB</label>
+    {{ form.jib }}
+  </div>
+  <div class="field">
+    <label>ŠIFRA DJELATNOSTI</label>
+    {{ form.sifra_djelatnosti }}
+  </div>
+</div>
 <div class="field-row">
   <div class="field">
     <label>PDV BROJ</label>
@@ -132,6 +142,8 @@
     {% endif %}
   </div>
   <div class="list-row-sub">
+    {% if obj.jib %}<span style="font-family:monospace; font-size:11px;">JIB: {{ obj.jib }}</span>{% endif %}
+    {% if obj.jib and obj.mjesto %} · {% endif %}
     {{ obj.mjesto }}{% if obj.mjesto and obj.entitet %} · {% endif %}{{ obj.get_entitet_display }}
   </div>
   <div class="list-row-actions">

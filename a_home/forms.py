@@ -32,6 +32,8 @@ class PoslovniPartnerForm(forms.ModelForm):
             'maticni_broj':        forms.TextInput(attrs={'placeholder': 'Matični broj'}),
             'porezni_broj':        forms.TextInput(attrs={'placeholder': 'Porezni/JIB broj'}),
             'broj_upisa_sud_reg':  forms.TextInput(attrs={'placeholder': 'Broj upisa u sud. reg.'}),
+            'jib':                 forms.TextInput(attrs={'placeholder': 'JIB/JMB (13 cifara)'}),
+            'sifra_djelatnosti':   forms.TextInput(attrs={'placeholder': 'npr. 47.11'}),
         }
 
 

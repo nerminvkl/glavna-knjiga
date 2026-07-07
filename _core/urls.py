@@ -114,6 +114,11 @@ urlpatterns = [
     path('place/<int:obracun_id>/obrisi/', obrisi_obracun_place, name='obrisi_obracun_place'),
     path('place/<int:obracun_id>/print/', print_obracun_place, name='print_obracun_place'),
     path('place/<int:obracun_id>/xlsx/', export_obracun_place_xlsx, name='export_obracun_place_xlsx'),
+
+    #mip obrazac
+    path('place/<int:obracun_id>/mip/', mip_view, name='mip_obracun'),
+    path('place/<int:obracun_id>/mip/xml/', mip_xml, name='mip_xml'),
+    path('place/<int:obracun_id>/stavka/<int:stavka_id>/mip/', mip_zaposlenik, name='mip_zaposlenik'),
 ]
 
 if settings.DEBUG:

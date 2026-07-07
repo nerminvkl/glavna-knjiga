@@ -40,6 +40,10 @@ class PoslovniPartner(models.Model):
     mjesto             = models.CharField(max_length=100, blank=True, verbose_name="Mjesto")
     ulica              = models.CharField(max_length=255, blank=True, verbose_name="Ulica")
 
+    #JIB i SD
+    jib                = models.CharField(max_length=13, blank=True, verbose_name="JIB/JMB")
+    sifra_djelatnosti  = models.CharField(max_length=20, blank=True, verbose_name="Šifra djelatnosti")
+
     # Kontakt
     telefon            = models.CharField(max_length=50, blank=True, verbose_name="Telefon")
     fax                = models.CharField(max_length=50, blank=True, verbose_name="Fax")

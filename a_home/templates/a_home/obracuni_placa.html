@@ -14,7 +14,7 @@
         </div>
         <div class="up-title">Obračuni plaća</div>
       </div>
-      <div style="display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <div class="up-firm-badge">
           <span class="up-firm-sifra">{{ partner.sifra }}</span>
           <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
@@ -24,63 +24,66 @@
       </div>
     </div>
 
-   <div class="up-table-wrap">
-  <div class="up-table-card">
-    <div class="up-table-head">
-      <div class="up-th" style="width:80px;">MJESEC</div>
-      <div class="up-th" style="flex:1;">NAZIV</div>
-      <div class="up-th" style="width:80px; text-align:center;">ZAPOSLENIH</div>
-      <div class="up-th up-th-num" style="width:130px;">UKUPNO BRUTO</div>
-      <div class="up-th up-th-num" style="width:130px;">UKUPNO NETO</div>
-      <div class="up-th" style="width:90px;">STATUS</div>
-      <div class="up-th" style="width:150px;"></div>
+    <div class="up-table-card" style="width:100%; overflow:hidden;">
+      <!-- HEADER -->
+      <div style="display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px;">
+        <div class="up-th" style="width:90px;">MJESEC</div>
+        <div class="up-th" style="flex:1;">NAZIV</div>
+        <div class="up-th" style="width:80px; text-align:center;">ZAPOSLENIH</div>
+        <div class="up-th" style="width:110px; text-align:right;">UKUPNO BRUTO</div>
+        <div class="up-th" style="width:110px; text-align:right;">UKUPNO NETO</div>
+        <div class="up-th" style="width:70px;">STATUS</div>
+        <div class="up-th" style="width:180px;"></div>
+      </div>
+
+      {% for ob in obracuni %}
+      <div style="display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s;">
+        <div style="width:90px;">
+          <span class="up-konto-badge">{{ ob.mjesec|stringformat:"02d" }}/{{ ob.godina.godina }}</span>
+        </div>
+        <div style="flex:1; color:#fff; font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          {{ ob.naziv|default:"Obračun plaća" }}
+        </div>
+        <div style="width:80px; text-align:center; color:rgba(255,255,255,0.5); font-size:13px;">
+          {{ ob.stavke.count }}
+        </div>
+        <div style="width:110px; text-align:right;">
+          <span style="color:#60a5fa; font-family:monospace; font-weight:600; font-size:13px;">{{ ob.ukupno_bruto|floatformat:2 }}</span>
+        </div>
+        <div style="width:110px; text-align:right;">
+          <span style="color:#34d399; font-family:monospace; font-weight:600; font-size:13px;">{{ ob.ukupno_neto|floatformat:2 }}</span>
+        </div>
+        <div style="width:70px;">
+          {% if ob.status == 'zakljucen' %}
+          <span style="background:rgba(107,114,128,0.18); color:#9ca3af; border:1px solid rgba(107,114,128,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap;">Zaključen</span>
+          {% else %}
+          <span style="background:rgba(22,163,74,0.18); color:#86efac; border:1px solid rgba(22,163,74,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap;">Nacrt</span>
+          {% endif %}
+        </div>
+        <div style="width:180px; display:flex; align-items:center; gap:4px; justify-content:flex-end; flex-shrink:0;">
+          <a href="{% url 'uredi_obracun_place' ob.id %}" style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:7px; padding:5px 10px; font-size:12px; text-decoration:none; white-space:nowrap;">Uredi</a>
+          <a href="{% url 'print_obracun_place' ob.id %}" target="_blank" style="background:rgba(96,165,250,0.1); color:#93c5fd; border:1px solid rgba(96,165,250,0.2); border-radius:7px; padding:5px 8px; font-size:13px; text-decoration:none;">🖨</a>
+          <a href="{% url 'export_obracun_place_xlsx' ob.id %}" style="background:rgba(52,211,153,0.1); color:#34d399; border:1px solid rgba(52,211,153,0.2); border-radius:7px; padding:5px 8px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center;">📊</a>
+          <a href="{% url 'mip_obracun' ob.id %}" target="_blank" style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); border-radius:7px; padding:5px 8px; font-size:12px; text-decoration:none; white-space:nowrap;">MIP</a>
+          <form method="post" action="{% url 'obrisi_obracun_place' ob.id %}" style="display:inline;" onsubmit="return confirm('Obrisati obračun?')">
+            {% csrf_token %}
+            <button type="submit" style="background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:5px 8px; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif;">×</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <div style="text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:60px 20px;">
+        Nema obračuna. Kreirajte prvi klikom na "+ Novi obračun".
+      </div>
+      {% endfor %}
     </div>
 
-    {% for ob in obracuni %}
-    <div class="up-row">
-      <div class="up-td" style="width:80px;">
-        <span class="up-konto-badge">{{ ob.mjesec|stringformat:"02d" }}/{{ ob.godina.godina }}</span>
-      </div>
-      <div class="up-td" style="flex:1;">
-        <div class="up-opis-main">{{ ob.naziv|default:"Obračun plaća" }}</div>
-      </div>
-      <div class="up-td" style="width:80px; text-align:center; color:rgba(255,255,255,0.5); font-size:13px;">
-        {{ ob.stavke.count }}
-      </div>
-      <div class="up-td up-td-num" style="width:130px;">
-        <span class="up-amount up-amount-d">{{ ob.ukupno_bruto|floatformat:2 }}</span>
-      </div>
-      <div class="up-td up-td-num" style="width:130px;">
-        <span class="up-amount up-amount-p">{{ ob.ukupno_neto|floatformat:2 }}</span>
-      </div>
-      <div class="up-td" style="width:90px;">
-        {% if ob.status == 'zakljucen' %}
-        <span class="badge-inactive">Zaključen</span>
-        {% else %}
-        <span class="badge-active">Nacrt</span>
-        {% endif %}
-      </div>
-      <div class="up-td akcije" style="width:200px;">
-        <a href="{% url 'uredi_obracun_place' ob.id %}" class="btn-edit">Uredi</a>
-        <a href="{% url 'print_obracun_place' ob.id %}" target="_blank" class="btn-print">🖨</a>
-       <a href="{% url 'export_obracun_place_xlsx' ob.id %}" class="btn-print" style="color:#34d399; background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.2);">📊</a>
-        <form method="post" action="{% url 'obrisi_obracun_place' ob.id %}" style="display:inline;" onsubmit="return confirm('Obrisati obračun?')">
-          {% csrf_token %}
-          <button type="submit" class="btn-delete">Obriši</button>
-        </form>
-      </div>
-    </div>
-    {% empty %}
-    <div class="up-empty">Nema obračuna. Kreirajte prvi klikom na "+ Novi obračun".</div>
-    {% endfor %}
-  </div>
-  </div>
   </div>
 </div>
 
 <style>
 .up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
-.up-header { display:flex; justify-content:space-between; align-items:flex-end; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; }
 .up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
 .up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
 .up-title { color:#fff; font-size:22px; font-weight:700; }
@@ -89,29 +92,16 @@
 .up-firm-naziv { color:#fff; font-size:13px; }
 .up-firm-year { background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.3); color:#93c5fd; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
 .btn-primary { background:#2563eb; color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.up-table-wrap { overflow-x:auto; border-radius:14px; }
-.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; min-width:800px; }
-.up-table-head { display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px; }
+.up-table-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; }
 .up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
-.up-th-num { text-align:right; }
-.up-row { display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s; }
-.up-row:last-child { border-bottom:none; }
-.up-row:hover { background:rgba(255,255,255,0.04); }
-.up-td { color:rgba(255,255,255,0.75); font-size:13px; white-space:nowrap; }
-.up-td-num { text-align:right; }
-.up-opis-main { color:#fff; font-size:13px; font-weight:500; }
 .up-konto-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:12px; font-weight:700; padding:3px 9px; border-radius:6px; }
-.up-amount { font-weight:600; font-family:monospace; font-size:13px; }
-.up-amount-d { color:#60a5fa; }
-.up-amount-p { color:#34d399; }
-.up-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:60px 20px; }
-.akcije { display:flex; align-items:center; gap:5px; }
-.btn-edit { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:7px; padding:5px 12px; font-size:12px; text-decoration:none; display:inline-block; }
-.btn-print { background:rgba(96,165,250,0.1); color:#93c5fd; border:1px solid rgba(96,165,250,0.2); border-radius:7px; padding:5px 10px; font-size:13px; text-decoration:none; display:inline-block; }
-.btn-delete { background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; }
-.badge-active { background:rgba(22,163,74,0.18); color:#86efac; border:1px solid rgba(22,163,74,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
-.badge-inactive { background:rgba(107,114,128,0.18); color:#9ca3af; border:1px solid rgba(107,114,128,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+
+@media (max-width: 768px) {
+  .up-page { padding:80px 12px 40px; }
+  .up-header { flex-direction:column; align-items:flex-start; }
+}
 </style>
+
 <script>
 function updateTime() {
   const now = new Date();
@@ -119,5 +109,9 @@ function updateTime() {
   document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 }
 setInterval(updateTime,1000); updateTime();
+function toggleNav() {
+  document.getElementById('topbar-nav').classList.toggle('open');
+  document.querySelector('.nav-hamburger')?.classList.toggle('open');
+}
 </script>
 {% endblock %}
