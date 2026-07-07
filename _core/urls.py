@@ -119,6 +119,7 @@ urlpatterns = [
     path('place/<int:obracun_id>/mip/', mip_view, name='mip_obracun'),
     path('place/<int:obracun_id>/mip/xml/', mip_xml, name='mip_xml'),
     path('place/<int:obracun_id>/stavka/<int:stavka_id>/mip/', mip_zaposlenik, name='mip_zaposlenik'),
+    path('place/<int:obracun_id>/stavka/<int:stavka_id>/mip/xml/', mip_xml_zaposlenik, name='mip_xml_zaposlenik'),
 ]
 
 if settings.DEBUG:

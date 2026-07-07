@@ -1988,41 +1988,44 @@ def mip_xml(request, obracun_id):
     from django.http import HttpResponse
     from decimal import Decimal
     from datetime import date as date_type
-    import xml.etree.ElementTree as ET
 
     obracun = get_object_or_404(ObracunPlace, id=obracun_id)
     partner = obracun.partner
     stavke = obracun.stavke.select_related('zaposlenik').all()
 
-    # Stope doprinosa FBiH (od 07.05.2025 nove stope)
-    STOPA_PIO = Decimal('0.17')      # 17% iz plaće
-    STOPA_ZO  = Decimal('0.1250')    # 12.5% zdravstveno
-    STOPA_NEZ = Decimal('0.015')     # 1.5% nezaposlenost
-    # Na teret poslodavca (nove stope od 01.07.2025)
-    STOPA_PIO_POSL = Decimal('0.025')  # 2.5%
-    STOPA_ZO_POSL  = Decimal('0.020')  # 2.0%
-
-    # Ukupni iznosi
-    ukupan_prihod   = sum(s.ukupno_bruto for s in stavke)
-    ukupni_doprinosi = sum(s.doprinosi for s in stavke)
-    ukupni_licni    = sum(s.licni_odbitak for s in stavke)
-    ukupni_porez    = sum(s.porez for s in stavke)
-
-    # Doprinosi na teret poslodavca
-    dopr_pio_posl = (ukupan_prihod * STOPA_PIO_POSL).quantize(Decimal('0.01'))
-    dopr_zo_posl  = (ukupan_prihod * STOPA_ZO_POSL).quantize(Decimal('0.01'))
-    dopr_nez_posl = (ukupan_prihod * STOPA_NEZ).quantize(Decimal('0.01'))
+    # Stope - od 07.05.2025 nove stope
+    # Iz plaće zaposlenika:
+    STOPA_PIO = Decimal('0.17')    # 17%
+    STOPA_ZO  = Decimal('0.1250') # 12.5%
+    STOPA_NEZ = Decimal('0.015')  # 1.5%
+    # Na teret poslodavca (od 01.07.2025):
+    STOPA_PIO_P = Decimal('0.025') # 2.5%
+    STOPA_ZO_P  = Decimal('0.020') # 2.0%
 
     datum_kreiranja = date_type.today().strftime('%d.%m.%Y')
+
+    ukupan_prihod    = sum(s.ukupno_bruto for s in stavke)
+    ukupni_doprinosi = sum(s.doprinosi for s in stavke)
+    ukupni_licni     = sum(s.licni_odbitak for s in stavke)
+    ukupni_porez     = sum(s.porez for s in stavke)
+
+    # Dio 3 - doprinosi na teret poslodavca
+    d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
+    d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
+    d3_nez = Decimal('0.00')  # nezaposlenost na teret poslodavca = 0 od 2025
+
+    jib = getattr(partner, 'jib', '') or ''
+    naziv = partner.naziv_1
+    sifra_dj = getattr(partner, 'sifra_djelatnosti', '') or ''
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>']
     lines.append('<MIP1023>')
 
-    # DIO 1 - Poslodavac
-    lines.append('  <Dio1>')
-    lines.append(f'    <JIB>{getattr(partner, "jib", "") or ""}</JIB>')
-    lines.append(f'    <Naziv>{partner.naziv_1}</Naziv>')
-    lines.append(f'    <SifraDjelatnosti>{getattr(partner, "sifra_djelatnosti", "") or ""}</SifraDjelatnosti>')
+    # DIO 1
+    lines.append('  <Poslodavac>')
+    lines.append(f'    <JIB>{jib}</JIB>')
+    lines.append(f'    <Naziv>{naziv}</Naziv>')
+    lines.append(f'    <SifraDjelatnosti>{sifra_dj}</SifraDjelatnosti>')
     lines.append(f'    <BrojZaposlenih>{stavke.count()}</BrojZaposlenih>')
     lines.append(f'    <UkupanPrihod>{ukupan_prihod:.2f}</UkupanPrihod>')
     lines.append(f'    <UkupniDoprinosi>{ukupni_doprinosi:.2f}</UkupniDoprinosi>')
@@ -2032,73 +2035,63 @@ def mip_xml(request, obracun_id):
     lines.append(f'    <PorezniPeriodGodina>{obracun.godina.godina}</PorezniPeriodGodina>')
     lines.append(f'    <DatumKreiranja>{datum_kreiranja}</DatumKreiranja>')
     lines.append(f'    <Operacija>1</Operacija>')
-    lines.append('  </Dio1>')
+    lines.append('  </Poslodavac>')
 
     # DIO 2 - Zaposlenici
-    lines.append('  <Dio2>')
+    lines.append('  <Zaposlenici>')
     for i, stavka in enumerate(stavke, 1):
         z = stavka.zaposlenik
-
-        bruto = stavka.bruto_placa
-        koristi = stavka.druge_koristi
         ukupno = stavka.ukupno_bruto
-
-        # Doprinosi iz plaće
         pio = (ukupno * STOPA_PIO).quantize(Decimal('0.01'))
         zo  = (ukupno * STOPA_ZO).quantize(Decimal('0.01'))
         nez = (ukupno * STOPA_NEZ).quantize(Decimal('0.01'))
         ukupno_dopr = pio + zo + nez
-
         neto = ukupno - ukupno_dopr
         licni = stavka.licni_odbitak
         osnovica = max(neto - licni, Decimal('0'))
-        porez = stavka.porez
-
-        datum_isplate = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_kreiranja
+        datum_isp = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_kreiranja
 
         lines.append(f'  <Zaposlenik RedniBroj="{i}">')
         lines.append(f'    <VrstaIsplate>1</VrstaIsplate>')
         lines.append(f'    <JMB>{z.jmb or ""}</JMB>')
         lines.append(f'    <ImeIPrezime>{z.prezime} {z.ime}</ImeIPrezime>')
         lines.append(f'    <OpcinaPrebivaista>{z.sifra_opcine or "097"}</OpcinaPrebivaista>')
-        lines.append(f'    <DatumIsplate>{datum_isplate}</DatumIsplate>')
-        lines.append(f'    <BrojRadnihSati>{stavka.radni_sati}</BrojRadnihSati>')
-        lines.append(f'    <BrojRadnihSatiNaBolovanju>{stavka.sati_bolovanja}</BrojRadnihSatiNaBolovanju>')
-        lines.append(f'    <BrutoPlaća>{bruto:.2f}</BrutoPlaća>')
-        lines.append(f'    <KoristiIDrugiOporezivPrihod>{koristi:.2f}</KoristiIDrugiOporezivPrihod>')
-        lines.append(f'    <UkupanOporezivPrihod>{ukupno:.2f}</UkupanOporezivPrihod>')
+        lines.append(f'    <DatumIsplate>{datum_isp}</DatumIsplate>')
+        lines.append(f'    <BrojRadnihSati>{int(stavka.radni_sati)}</BrojRadnihSati>')
+        lines.append(f'    <BrojSatiNaBolovanju>{int(stavka.sati_bolovanja)}</BrojSatiNaBolovanju>')
+        lines.append(f'    <BrutoPlaća>{stavka.bruto_placa:.2f}</BrutoPlaća>')
+        lines.append(f'    <KoristiDrugiPrihodi>{stavka.druge_koristi:.2f}</KoristiDrugiPrihodi>')
+        lines.append(f'    <UkupanPrihod>{ukupno:.2f}</UkupanPrihod>')
         lines.append(f'    <DoprinosiPIO>{pio:.2f}</DoprinosiPIO>')
         lines.append(f'    <DoprinosiZO>{zo:.2f}</DoprinosiZO>')
         lines.append(f'    <DoprinosiNezaposlenost>{nez:.2f}</DoprinosiNezaposlenost>')
         lines.append(f'    <UkupniDoprinosi>{ukupno_dopr:.2f}</UkupniDoprinosi>')
-        lines.append(f'    <PrihodUmanjenZaDoprinose>{neto:.2f}</PrihodUmanjenZaDoprinose>')
+        lines.append(f'    <PrihodUmanjenZaDopr>{neto:.2f}</PrihodUmanjenZaDopr>')
         lines.append(f'    <FaktorLicnogOdbitka>{z.kf_licnog_odbitka}</FaktorLicnogOdbitka>')
         lines.append(f'    <IznosLicnogOdbitka>{licni:.2f}</IznosLicnogOdbitka>')
         lines.append(f'    <OsnovicaPoreza>{osnovica:.2f}</OsnovicaPoreza>')
-        lines.append(f'    <IznosPoreza>{porez:.2f}</IznosPoreza>')
-        lines.append(f'    <BrojRadnihSatiSaUvecanimTrajanjem>0</BrojRadnihSatiSaUvecanimTrajanjem>')
+        lines.append(f'    <IznosPoreza>{stavka.porez:.2f}</IznosPoreza>')
+        lines.append(f'    <BrojSatiUvecanoTrajanje>0</BrojSatiUvecanoTrajanje>')
         lines.append(f'    <StepenUvecanja>0</StepenUvecanja>')
         lines.append(f'    <SifraRadnogMjesta>0</SifraRadnogMjesta>')
         lines.append(f'    <DoprinosiPIOUvecaniStaz>0.00</DoprinosiPIOUvecaniStaz>')
         lines.append(f'  </Zaposlenik>')
-
-    lines.append('  </Dio2>')
+    lines.append('  </Zaposlenici>')
 
     # DIO 3 - Doprinosi na teret poslodavca
-    lines.append('  <Dio3>')
-    lines.append(f'    <DoprinosiPIOPoslodavac>{dopr_pio_posl:.2f}</DoprinosiPIOPoslodavac>')
-    lines.append(f'    <DoprinosiZOPoslodavac>{dopr_zo_posl:.2f}</DoprinosiZOPoslodavac>')
-    lines.append(f'    <DoprinosiNezaposlenostPoslodavac>{dopr_nez_posl:.2f}</DoprinosiNezaposlenostPoslodavac>')
-    lines.append(f'    <DodatniDoprinosiZOPoslodavac>0.00</DodatniDoprinosiZOPoslodavac>')
-    lines.append('  </Dio3>')
+    lines.append('  <DoprinosiPoslodavac>')
+    lines.append(f'    <DoprinosiPIO>{d3_pio:.2f}</DoprinosiPIO>')
+    lines.append(f'    <DoprinosiZO>{d3_zo:.2f}</DoprinosiZO>')
+    lines.append(f'    <DoprinosiNezaposlenost>{d3_nez:.2f}</DoprinosiNezaposlenost>')
+    lines.append(f'    <DodatniDoprinosiZO>0.00</DodatniDoprinosiZO>')
+    lines.append('  </DoprinosiPoslodavac>')
 
     lines.append('</MIP1023>')
 
     xml_content = '\n'.join(lines)
 
-    # Naziv fajla = JIB poslodavca (standard porezne uprave)
-    jib = getattr(partner, 'jib', '') or partner.sifra or 'MIP'
-    filename = f"{jib}.xml"
+    # Naziv fajla = JIB poslodavca (standard PU FBiH)
+    filename = f"{jib or 'MIP'}.xml"
 
     response = HttpResponse(xml_content, content_type='application/xml; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -2116,3 +2109,117 @@ def mip_zaposlenik(request, obracun_id, stavka_id):
         'stavke': [stavka],  # samo jedan zaposlenik
         'single': True,
     })
+
+@login_required
+def mip_xml_zaposlenik(request, obracun_id, stavka_id):
+    from django.http import HttpResponse
+    from decimal import Decimal
+    from datetime import date as date_type
+
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner = obracun.partner
+    stavke = obracun.stavke.select_related('zaposlenik').all()
+
+    # Stope - od 07.05.2025 nove stope
+    # Iz plaće zaposlenika:
+    STOPA_PIO = Decimal('0.17')    # 17%
+    STOPA_ZO  = Decimal('0.1250') # 12.5%
+    STOPA_NEZ = Decimal('0.015')  # 1.5%
+    # Na teret poslodavca (od 01.07.2025):
+    STOPA_PIO_P = Decimal('0.025') # 2.5%
+    STOPA_ZO_P  = Decimal('0.020') # 2.0%
+
+    datum_kreiranja = date_type.today().strftime('%d.%m.%Y')
+
+    ukupan_prihod    = sum(s.ukupno_bruto for s in stavke)
+    ukupni_doprinosi = sum(s.doprinosi for s in stavke)
+    ukupni_licni     = sum(s.licni_odbitak for s in stavke)
+    ukupni_porez     = sum(s.porez for s in stavke)
+
+    # Dio 3 - doprinosi na teret poslodavca
+    d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
+    d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
+    d3_nez = Decimal('0.00')  # nezaposlenost na teret poslodavca = 0 od 2025
+
+    jib = getattr(partner, 'jib', '') or ''
+    naziv = partner.naziv_1
+    sifra_dj = getattr(partner, 'sifra_djelatnosti', '') or ''
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+    lines.append('<MIP1023>')
+
+    # DIO 1
+    lines.append('  <Poslodavac>')
+    lines.append(f'    <JIB>{jib}</JIB>')
+    lines.append(f'    <Naziv>{naziv}</Naziv>')
+    lines.append(f'    <SifraDjelatnosti>{sifra_dj}</SifraDjelatnosti>')
+    lines.append(f'    <BrojZaposlenih>{stavke.count()}</BrojZaposlenih>')
+    lines.append(f'    <UkupanPrihod>{ukupan_prihod:.2f}</UkupanPrihod>')
+    lines.append(f'    <UkupniDoprinosi>{ukupni_doprinosi:.2f}</UkupniDoprinosi>')
+    lines.append(f'    <UkupniLicniOdbitak>{ukupni_licni:.2f}</UkupniLicniOdbitak>')
+    lines.append(f'    <UkupniPorez>{ukupni_porez:.2f}</UkupniPorez>')
+    lines.append(f'    <PorezniPeriodMjesec>{obracun.mjesec:02d}</PorezniPeriodMjesec>')
+    lines.append(f'    <PorezniPeriodGodina>{obracun.godina.godina}</PorezniPeriodGodina>')
+    lines.append(f'    <DatumKreiranja>{datum_kreiranja}</DatumKreiranja>')
+    lines.append(f'    <Operacija>1</Operacija>')
+    lines.append('  </Poslodavac>')
+
+    # DIO 2 - Zaposlenici
+    lines.append('  <Zaposlenici>')
+    for i, stavka in enumerate(stavke, 1):
+        z = stavka.zaposlenik
+        ukupno = stavka.ukupno_bruto
+        pio = (ukupno * STOPA_PIO).quantize(Decimal('0.01'))
+        zo  = (ukupno * STOPA_ZO).quantize(Decimal('0.01'))
+        nez = (ukupno * STOPA_NEZ).quantize(Decimal('0.01'))
+        ukupno_dopr = pio + zo + nez
+        neto = ukupno - ukupno_dopr
+        licni = stavka.licni_odbitak
+        osnovica = max(neto - licni, Decimal('0'))
+        datum_isp = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_kreiranja
+
+        lines.append(f'  <Zaposlenik RedniBroj="{i}">')
+        lines.append(f'    <VrstaIsplate>1</VrstaIsplate>')
+        lines.append(f'    <JMB>{z.jmb or ""}</JMB>')
+        lines.append(f'    <ImeIPrezime>{z.prezime} {z.ime}</ImeIPrezime>')
+        lines.append(f'    <OpcinaPrebivaista>{z.sifra_opcine or "097"}</OpcinaPrebivaista>')
+        lines.append(f'    <DatumIsplate>{datum_isp}</DatumIsplate>')
+        lines.append(f'    <BrojRadnihSati>{int(stavka.radni_sati)}</BrojRadnihSati>')
+        lines.append(f'    <BrojSatiNaBolovanju>{int(stavka.sati_bolovanja)}</BrojSatiNaBolovanju>')
+        lines.append(f'    <BrutoPlaća>{stavka.bruto_placa:.2f}</BrutoPlaća>')
+        lines.append(f'    <KoristiDrugiPrihodi>{stavka.druge_koristi:.2f}</KoristiDrugiPrihodi>')
+        lines.append(f'    <UkupanPrihod>{ukupno:.2f}</UkupanPrihod>')
+        lines.append(f'    <DoprinosiPIO>{pio:.2f}</DoprinosiPIO>')
+        lines.append(f'    <DoprinosiZO>{zo:.2f}</DoprinosiZO>')
+        lines.append(f'    <DoprinosiNezaposlenost>{nez:.2f}</DoprinosiNezaposlenost>')
+        lines.append(f'    <UkupniDoprinosi>{ukupno_dopr:.2f}</UkupniDoprinosi>')
+        lines.append(f'    <PrihodUmanjenZaDopr>{neto:.2f}</PrihodUmanjenZaDopr>')
+        lines.append(f'    <FaktorLicnogOdbitka>{z.kf_licnog_odbitka}</FaktorLicnogOdbitka>')
+        lines.append(f'    <IznosLicnogOdbitka>{licni:.2f}</IznosLicnogOdbitka>')
+        lines.append(f'    <OsnovicaPoreza>{osnovica:.2f}</OsnovicaPoreza>')
+        lines.append(f'    <IznosPoreza>{stavka.porez:.2f}</IznosPoreza>')
+        lines.append(f'    <BrojSatiUvecanoTrajanje>0</BrojSatiUvecanoTrajanje>')
+        lines.append(f'    <StepenUvecanja>0</StepenUvecanja>')
+        lines.append(f'    <SifraRadnogMjesta>0</SifraRadnogMjesta>')
+        lines.append(f'    <DoprinosiPIOUvecaniStaz>0.00</DoprinosiPIOUvecaniStaz>')
+        lines.append(f'  </Zaposlenik>')
+    lines.append('  </Zaposlenici>')
+
+    # DIO 3 - Doprinosi na teret poslodavca
+    lines.append('  <DoprinosiPoslodavac>')
+    lines.append(f'    <DoprinosiPIO>{d3_pio:.2f}</DoprinosiPIO>')
+    lines.append(f'    <DoprinosiZO>{d3_zo:.2f}</DoprinosiZO>')
+    lines.append(f'    <DoprinosiNezaposlenost>{d3_nez:.2f}</DoprinosiNezaposlenost>')
+    lines.append(f'    <DodatniDoprinosiZO>0.00</DodatniDoprinosiZO>')
+    lines.append('  </DoprinosiPoslodavac>')
+
+    lines.append('</MIP1023>')
+
+    xml_content = '\n'.join(lines)
+
+    # Naziv fajla = JIB poslodavca (standard PU FBiH)
+    filename = f"{jib or 'MIP'}.xml"
+
+    response = HttpResponse(xml_content, content_type='application/xml; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

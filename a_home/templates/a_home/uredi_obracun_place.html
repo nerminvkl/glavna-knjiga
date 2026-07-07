@@ -129,9 +129,13 @@
           <div style="width:110px; text-align:right; color:#34d399; font-family:monospace; font-size:14px; font-weight:700;">{{ stavka.neto_za_isplatu|floatformat:2 }}</div>
 
           {% if obracun.status != 'zakljucen' %}
-          <a href="{% url 'mip_zaposlenik' obracun.id stavka.id %}" target="_blank"
+<a href="{% url 'mip_zaposlenik' obracun.id stavka.id %}" target="_blank"
   style="background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.2); border-radius:7px; padding:4px 8px; font-size:11px; text-decoration:none; white-space:nowrap;">
   MIP
+</a>
+<a href="{% url 'mip_xml_zaposlenik' obracun.id stavka.id %}"
+  style="background:rgba(52,211,153,0.1); color:#34d399; border:1px solid rgba(52,211,153,0.2); border-radius:7px; padding:4px 8px; font-size:11px; text-decoration:none; white-space:nowrap;">
+  XML
 </a>
 
           <div style="width:60px; text-align:center;">
