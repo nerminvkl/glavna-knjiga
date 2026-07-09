@@ -27,7 +27,7 @@
     <div class="up-table-card" style="width:100%; overflow:hidden;">
       <!-- HEADER -->
       <div style="display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px;">
-        <div class="up-th" style="width:90px;">MJESEC</div>
+        <div class="up-th" style="width:100px;">MJESEC</div>
         <div class="up-th" style="flex:1;">NAZIV</div>
         <div class="up-th" style="width:80px; text-align:center;">ZAPOSLENIH</div>
         <div class="up-th" style="width:110px; text-align:right;">UKUPNO BRUTO</div>
@@ -38,7 +38,7 @@
 
       {% for ob in obracuni %}
       <div style="display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s;">
-        <div style="width:90px;">
+        <div style="width:100px;">
           <span class="up-konto-badge">{{ ob.mjesec|stringformat:"02d" }}/{{ ob.godina.godina }}</span>
         </div>
         <div style="flex:1; color:#fff; font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
