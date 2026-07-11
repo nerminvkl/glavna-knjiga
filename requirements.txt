@@ -14,3 +14,5 @@ sqlparse==0.5.5
 whitenoise==6.12.0
 pypdf
 pymupdf
+psycopg2
+gunicorn
