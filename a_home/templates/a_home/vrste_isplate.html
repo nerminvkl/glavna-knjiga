@@ -1,0 +1,236 @@
+{% extends 'layouts/blank.html' %}
+{% load static %}
+{% block content %}
+<div class="portal">
+  <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
+  <div class="overlay"></div>
+  {% include 'a_home/topbar.html' %}
+
+  <div class="up-page">
+    <div class="up-header">
+      <div class="up-header-left">
+        <div class="up-breadcrumb">
+          <a href="{% url 'glavna_knjiga' partner.id %}">← {{ partner.naziv_1 }}</a> › Vrste isplate
+        </div>
+        <div class="up-title">Vrste isplate</div>
+      </div>
+      <div class="up-firm-badge">
+        <span class="up-firm-sifra">{{ partner.sifra }}</span>
+        <span class="up-firm-naziv">{{ partner.naziv_1 }}</span>
+      </div>
+    </div>
+
+    <div class="vi-layout">
+
+      <!-- FORMA -->
+      <div class="vi-form-card">
+        <div class="vi-form-header">
+          {% if edit_obj %}
+          <span class="badge-edit">✎ Izmjena</span>
+          <span class="vi-form-title">Izmjena vrste isplate</span>
+          {% else %}
+          <span class="badge-new">+ Nova</span>
+          <span class="vi-form-title">Dodaj vrstu isplate</span>
+          {% endif %}
+        </div>
+        <form method="post" class="vi-form">
+          {% csrf_token %}
+
+          <div class="vi-row-2">
+            <div class="vi-field">
+              <label>ŠIFRA</label>
+              <input type="text" name="sifra" value="{{ edit_obj.sifra|default:'' }}" maxlength="10" required
+                placeholder="npr. 01">
+            </div>
+            <div class="vi-field" style="flex:2;">
+              <label>NAZIV</label>
+              <input type="text" name="naziv" value="{{ edit_obj.naziv|default:'' }}" required
+                placeholder="npr. Osnovna plaća">
+            </div>
+          </div>
+
+          <div class="vi-field">
+            <label>KOEFICIJENT OBRAČUNA</label>
+            <input type="number" name="koeficijent"
+              value="{{ edit_obj.koeficijent|default:'1' }}"
+              step="0.01" min="0" max="10"
+              placeholder="npr. 1.30">
+          </div>
+
+          <div class="vi-toggles">
+            <div class="vi-toggle-item">
+              <div class="vi-toggle-info">
+                <span class="vi-toggle-label">Doprinosi se obračunavaju</span>
+                <span class="vi-toggle-desc">Uključiti u obračun doprinosa i poreza</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" name="obracunava_doprinose"
+                  {% if not edit_obj or edit_obj.obracunava_doprinose %}checked{% endif %}>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="vi-toggle-item">
+              <div class="vi-toggle-info">
+                <span class="vi-toggle-label">Aktivan</span>
+                <span class="vi-toggle-desc">Vidljivo u obračunima plaća</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" name="aktivan"
+                  {% if not edit_obj or edit_obj.aktivan %}checked{% endif %}>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="vi-form-actions">
+            <button type="submit" class="btn-primary">
+              {% if edit_obj %}Sačuvaj{% else %}Dodaj{% endif %}
+            </button>
+            {% if edit_obj %}
+            <a href="{% url 'vrste_isplate' partner.id %}" class="btn-ghost">Odustani</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <!-- LISTA -->
+      <div class="vi-lista-card">
+        <div class="vi-lista-header">
+          <span>Vrste isplate</span>
+          <span class="vi-count">{{ lista|length }} zapisa</span>
+        </div>
+
+        <!-- TABLE HEADER -->
+        <div class="vi-table-head">
+          <div class="vi-th" style="width:50px;">ŠIFRA</div>
+          <div class="vi-th" style="flex:1;">NAZIV</div>
+          <div class="vi-th" style="width:70px; text-align:center;">KOEF.</div>
+          <div class="vi-th" style="width:60px; text-align:center;">DOPR.</div>
+          <div class="vi-th" style="width:60px; text-align:center;">STATUS</div>
+          <div class="vi-th" style="width:100px;"></div>
+        </div>
+
+        {% for obj in lista %}
+        <div class="vi-row {% if edit_obj.pk == obj.pk %}vi-row-active{% endif %}">
+          <div style="width:50px;">
+            <span class="vi-sifra-badge">{{ obj.sifra }}</span>
+          </div>
+          <div style="flex:1;">
+            <div class="vi-naziv">{{ obj.naziv }}</div>
+          </div>
+          <div style="width:70px; text-align:center;">
+            <span class="vi-koef {% if obj.koeficijent > 1 %}vi-koef-high{% elif obj.koeficijent == 0 %}vi-koef-zero{% endif %}">
+              {{ obj.koeficijent }}
+            </span>
+          </div>
+          <div style="width:60px; text-align:center;">
+            {% if obj.obracunava_doprinose %}
+            <span class="vi-check">✓</span>
+            {% else %}
+            <span class="vi-dash">—</span>
+            {% endif %}
+          </div>
+          <div style="width:60px; text-align:center;">
+            {% if obj.aktivan %}
+            <span class="badge-active-sm">Aktivan</span>
+            {% else %}
+            <span class="badge-inactive-sm">Neakt.</span>
+            {% endif %}
+          </div>
+          <div style="width:100px; display:flex; gap:5px; justify-content:flex-end;">
+            <a href="{% url 'vrste_isplate' partner.id %}?edit={{ obj.pk }}"
+              class="btn-edit-sm">Izmijeni</a>
+            <form method="post" action="{% url 'vrsta_isplate_delete' obj.pk %}"
+              style="display:inline;" onsubmit="return confirm('Obrisati vrstu isplate?')">
+              {% csrf_token %}
+              <button type="submit" class="btn-del-sm">×</button>
+            </form>
+          </div>
+        </div>
+        {% empty %}
+        <div class="vi-empty">
+          Nema vrsta isplate. Dodajte prvu iznad.
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.up-page { position:relative; z-index:10; min-height:100vh; padding:90px 32px 40px; box-sizing:border-box; font-family:'Inter',sans-serif; display:flex; flex-direction:column; gap:16px; }
+.up-header { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; }
+.up-breadcrumb { color:rgba(255,255,255,0.3); font-size:12px; margin-bottom:6px; }
+.up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; }
+.up-title { color:#fff; font-size:22px; font-weight:700; }
+.up-firm-badge { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); padding:8px 16px; border-radius:10px; }
+.up-firm-sifra { color:#60a5fa; font-size:12px; font-weight:700; font-family:monospace; }
+.up-firm-naziv { color:#fff; font-size:13px; }
+
+.vi-layout { display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start; }
+
+/* FORMA */
+.vi-form-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:16px; overflow:hidden; }
+.vi-form-header { display:flex; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.03); }
+.vi-form-title { color:#fff; font-size:14px; font-weight:600; }
+.badge-new { background:rgba(37,99,235,0.2); border:1px solid rgba(37,99,235,0.3); color:#93c5fd; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.badge-edit { background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.25); color:#fde047; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.vi-form { padding:20px; display:flex; flex-direction:column; gap:12px; }
+.vi-row-2 { display:flex; gap:10px; }
+.vi-field { display:flex; flex-direction:column; gap:5px; flex:1; }
+.vi-field label { color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; }
+.vi-field input { background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important; }
+.vi-field input:focus { border-color:rgba(96,165,250,0.4) !important; }
+
+.vi-toggles { display:flex; flex-direction:column; gap:0; border:1px solid rgba(255,255,255,0.08); border-radius:10px; overflow:hidden; }
+.vi-toggle-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.vi-toggle-item:last-child { border-bottom:none; }
+.vi-toggle-label { color:rgba(255,255,255,0.75); font-size:13px; font-weight:500; }
+.vi-toggle-desc { color:rgba(255,255,255,0.3); font-size:11px; margin-top:1px; }
+
+.vi-form-actions { display:flex; gap:10px; padding-top:4px; }
+.btn-primary { background:#2563eb; color:#fff; border:none; border-radius:9px; padding:10px 24px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; }
+.btn-ghost { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.12); border-radius:9px; padding:10px 20px; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; }
+
+/* LISTA */
+.vi-lista-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:16px; overflow:hidden; }
+.vi-lista-header { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.03); color:#fff; font-size:14px; font-weight:600; }
+.vi-count { color:rgba(255,255,255,0.3); font-size:12px; font-weight:400; }
+.vi-table-head { display:flex; align-items:center; padding:8px 16px; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); gap:8px; }
+.vi-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
+.vi-row { display:flex; align-items:center; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px; transition:background 0.15s; }
+.vi-row:last-child { border-bottom:none; }
+.vi-row:hover { background:rgba(255,255,255,0.04); }
+.vi-row-active { background:rgba(96,165,250,0.06) !important; border-left:3px solid #3b82f6; }
+.vi-sifra-badge { background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.2); color:#93c5fd; font-family:monospace; font-size:11px; font-weight:700; padding:2px 7px; border-radius:5px; }
+.vi-naziv { color:#fff; font-size:13px; font-weight:500; }
+.vi-koef { font-family:monospace; font-size:13px; font-weight:700; color:rgba(255,255,255,0.6); }
+.vi-koef-high { color:#fbbf24; }
+.vi-koef-zero { color:rgba(255,255,255,0.25); }
+.vi-check { color:#34d399; font-size:14px; font-weight:700; }
+.vi-dash { color:rgba(255,255,255,0.2); font-size:14px; }
+.badge-active-sm { background:rgba(22,163,74,0.15); border:1px solid rgba(22,163,74,0.25); color:#86efac; font-size:9px; font-weight:600; padding:2px 6px; border-radius:20px; white-space:nowrap; }
+.badge-inactive-sm { background:rgba(107,114,128,0.15); border:1px solid rgba(107,114,128,0.25); color:#9ca3af; font-size:9px; font-weight:600; padding:2px 6px; border-radius:20px; white-space:nowrap; }
+.btn-edit-sm { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.12); border-radius:7px; padding:4px 10px; font-size:11px; text-decoration:none; white-space:nowrap; }
+.btn-del-sm { background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:4px 8px; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; }
+.vi-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:40px 20px; }
+
+@media (max-width: 900px) {
+  .vi-layout { grid-template-columns:1fr; }
+}
+</style>
+
+<script>
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dt-time').textContent = now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dt-date').textContent = now.toLocaleDateString('bs-BA',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+setInterval(updateTime,1000); updateTime();
+function toggleNav() {
+  document.getElementById('topbar-nav').classList.toggle('open');
+  document.querySelector('.nav-hamburger')?.classList.toggle('open');
+}
+</script>
+{% endblock %}

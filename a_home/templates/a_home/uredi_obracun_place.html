@@ -5,8 +5,9 @@
   <img src="/static/images/wallpapers/{{ bg_pozadina }}" class="bg-img" alt="bg">
   <div class="overlay"></div>
   {% include 'a_home/topbar.html' %}
-
   <div class="up-page">
+
+    <!-- HEADER -->
     <div class="up-header">
       <div class="up-header-left">
         <div class="up-breadcrumb">
@@ -15,7 +16,7 @@
           <span style="color:rgba(255,255,255,0.4);">{{ obracun.mjesec|stringformat:"02d" }}/{{ obracun.godina.godina }}</span>
         </div>
         <div class="up-title">Obračun plaća — {{ obracun.mjesec|stringformat:"02d" }}/{{ obracun.godina.godina }}</div>
-        <div style="color:rgba(255,255,255,0.4); font-size:13px; margin-top:4px;">
+        <div style="margin-top:4px;">
           {% if obracun.status == 'zakljucen' %}
           <span style="background:rgba(107,114,128,0.18); color:#9ca3af; border:1px solid rgba(107,114,128,0.25); font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px;">Zaključen</span>
           {% else %}
@@ -24,37 +25,22 @@
         </div>
       </div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <a href="{% url 'print_obracun_place' obracun.id %}" target="_blank"
-          style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
-          🖨 Štampaj
-        </a>
-        <a href="{% url 'export_obracun_place_xlsx' obracun.id %}"
-          style="background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
-          📊 Excel
-        </a>
-        <a href="{% url 'mip_pdf' obracun.id %}"
-  style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); border-radius:7px; padding:5px 8px; font-size:12px; text-decoration:none; white-space:nowrap;">
-  📄 MIP PDF
-</a>
-        <a href="{% url 'mip_xml' obracun.id %}"
-          style="background:rgba(96,165,250,0.12); color:#93c5fd; border:1px solid rgba(96,165,250,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
-          📥 XML
-        </a>
+        <a href="{% url 'print_obracun_place' obracun.id %}" target="_blank" style="background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.15); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">🖨 Štampaj</a>
+        <a href="{% url 'export_obracun_place_xlsx' obracun.id %}" style="background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">📊 Excel</a>
+        <a href="{% url 'mip_obracun' obracun.id %}" target="_blank" style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">📋 MIP</a>
+        <a href="{% url 'mip_pdf' obracun.id %}" style="background:rgba(251,191,36,0.08); color:#fbbf24; border:1px solid rgba(251,191,36,0.2); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">📄 MIP PDF</a>
+        <a href="{% url 'mip_xml' obracun.id %}" style="background:rgba(96,165,250,0.12); color:#93c5fd; border:1px solid rgba(96,165,250,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">📥 XML</a>
         {% if obracun.status != 'zakljucen' %}
         <form method="post" onsubmit="return confirm('Zaključiti obračun?')">
           {% csrf_token %}
           <input type="hidden" name="action" value="zakljuci">
-          <button type="submit" style="background:rgba(22,163,74,0.2); color:#86efac; border:1px solid rgba(22,163,74,0.3); padding:9px 14px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap;">
-            Zaključi
-          </button>
+          <button type="submit" style="background:rgba(22,163,74,0.2); color:#86efac; border:1px solid rgba(22,163,74,0.3); padding:9px 14px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap;">Zaključi</button>
         </form>
         {% else %}
         <form method="post">
           {% csrf_token %}
           <input type="hidden" name="action" value="otvori">
-          <button type="submit" style="background:rgba(234,179,8,0.15); color:#fde047; border:1px solid rgba(234,179,8,0.25); padding:9px 14px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap;">
-            Otvori
-          </button>
+          <button type="submit" style="background:rgba(234,179,8,0.15); color:#fde047; border:1px solid rgba(234,179,8,0.25); padding:9px 14px; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap;">Otvori</button>
         </form>
         {% endif %}
       </div>
@@ -66,114 +52,168 @@
       <form method="post" style="display:flex; gap:10px; align-items:flex-end;">
         {% csrf_token %}
         <input type="hidden" name="action" value="dodaj_zaposlenika">
-        <div style="display:flex; flex-direction:column; gap:4px; flex:1; min-width:200px;">
+        <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
           <label style="color:rgba(255,255,255,0.35); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">DODAJ ZAPOSLENIKA</label>
-          <select name="zaposlenik_id" required
-            style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
+          <select name="zaposlenik_id" required style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:9px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:13px !important; padding:9px 12px !important; outline:none !important; width:100% !important; box-sizing:border-box !important;">
             <option value="">— Odaberi zaposlenika —</option>
             {% for z in dostupni_zaposlenici %}
             <option value="{{ z.id }}">{{ z.prezime }} {{ z.ime }}</option>
             {% endfor %}
           </select>
         </div>
-        <button type="submit"
-          style="background:#2563eb !important; color:#fff !important; border:none !important; border-radius:9px !important; padding:10px 20px !important; font-size:13px !important; font-weight:600 !important; cursor:pointer !important; font-family:'Inter',sans-serif !important; white-space:nowrap !important;">
-          + Dodaj
-        </button>
+        <button type="submit" style="background:#2563eb !important; color:#fff !important; border:none !important; border-radius:9px !important; padding:10px 20px !important; font-size:13px !important; font-weight:600 !important; cursor:pointer !important; font-family:'Inter',sans-serif !important; white-space:nowrap !important;">+ Dodaj</button>
       </form>
     </div>
     {% endif %}
 
-    <!-- TABELA -->
-    <div style="overflow-x:auto; border-radius:14px;">
-      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:14px; min-width:900px;">
+    <!-- ZAPOSLENICI -->
+    {% for stavka in stavke %}
+    <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
 
-        <!-- HEADER -->
-        <div style="display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); gap:8px;">
-          <div class="up-th" style="flex:1;">ZAPOSLENIK</div>
-          <div class="up-th" style="width:90px; text-align:right;">SATI</div>
-          <div class="up-th" style="width:130px; text-align:right;">BRUTO PLAĆA</div>
-          <div class="up-th" style="width:100px; text-align:right;">DOPRINOSI 31%</div>
-          <div class="up-th" style="width:100px; text-align:right;">NETO PLAĆA</div>
-          <div class="up-th" style="width:90px; text-align:right;">POREZ 10%</div>
-          <div class="up-th" style="width:110px; text-align:right;">ZA ISPLATU</div>
-          <div class="up-th" style="width:120px;"></div>
-        </div>
-
-        {% for stavka in stavke %}
-        <div style="display:flex; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); gap:8px;">
-
-          <!-- ZAPOSLENIK -->
-          <div style="flex:1;">
-            <div style="color:#fff; font-size:13px; font-weight:600;">{{ stavka.zaposlenik.prezime }} {{ stavka.zaposlenik.ime }}</div>
-            {% if stavka.zaposlenik.pozicija %}
-            <div style="color:rgba(255,255,255,0.3); font-size:11px;">{{ stavka.zaposlenik.pozicija }}</div>
-            {% endif %}
+      <!-- ZAPOSLENIK HEADER -->
+      <div style="display:flex; align-items:center; padding:12px 16px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.07); gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:150px;">
+          <div style="color:#fff; font-size:14px; font-weight:700;">{{ stavka.zaposlenik.prezime }} {{ stavka.zaposlenik.ime }}</div>
+          <div style="color:rgba(255,255,255,0.35); font-size:11px; margin-top:2px;">
+            {% if stavka.zaposlenik.pozicija %}{{ stavka.zaposlenik.pozicija }} · {% endif %}
+            Kf: {{ stavka.zaposlenik.kf_licnog_odbitka }}
           </div>
-
+        </div>
+        <div style="text-align:right;">
+          <div style="color:rgba(255,255,255,0.4); font-size:9px; text-transform:uppercase; letter-spacing:0.08em;">Bruto</div>
+          <div style="color:#60a5fa; font-family:monospace; font-size:15px; font-weight:700;">{{ stavka.ukupno_bruto|floatformat:2 }} KM</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:rgba(255,255,255,0.4); font-size:9px; text-transform:uppercase; letter-spacing:0.08em;">Za isplatu</div>
+          <div style="color:#34d399; font-family:monospace; font-size:15px; font-weight:700;">{{ stavka.neto_za_isplatu|floatformat:2 }} KM</div>
+        </div>
+        <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+          <a href="{% url 'platna_lista' obracun.id stavka.id %}" target="_blank" style="background:rgba(167,139,250,0.12); color:#c4b5fd; border:1px solid rgba(167,139,250,0.25); border-radius:7px; padding:5px 10px; font-size:11px; text-decoration:none; white-space:nowrap;">📄 Platna lista</a>
+          <a href="{% url 'mip_zaposlenik' obracun.id stavka.id %}" target="_blank" style="background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.2); border-radius:7px; padding:5px 10px; font-size:11px; text-decoration:none; white-space:nowrap;">MIP</a>
+          <a href="{% url 'mip_xml_zaposlenik' obracun.id stavka.id %}" style="background:rgba(52,211,153,0.1); color:#34d399; border:1px solid rgba(52,211,153,0.2); border-radius:7px; padding:5px 10px; font-size:11px; text-decoration:none; white-space:nowrap;">XML</a>
           {% if obracun.status != 'zakljucen' %}
-          <form method="post" style="display:contents;">
+          <form method="post" onsubmit="return confirm('Ukloniti zaposlenika?')" style="display:inline;">
             {% csrf_token %}
-            <input type="hidden" name="action" value="update_stavka">
+            <input type="hidden" name="action" value="obrisi_stavku">
             <input type="hidden" name="stavka_id" value="{{ stavka.id }}">
-            <div style="width:90px; text-align:right;">
-              <input type="number" name="radni_sati" value="{{ stavka.radni_sati }}" step="0.5" min="0"
-                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:82px !important; text-align:right !important; outline:none !important;"
-                onchange="this.form.submit()">
-            </div>
-            <div style="width:130px; text-align:right;">
-              <input type="number" name="bruto_placa" value="{{ stavka.bruto_placa }}" step="0.01" min="0"
-                style="background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; border-radius:7px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:4px 8px !important; width:122px !important; text-align:right !important; outline:none !important;"
-                onchange="this.form.submit()">
-            </div>
+            <button type="submit" style="background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer;">× Ukloni</button>
           </form>
-          {% else %}
-          <div style="width:90px; text-align:right; color:rgba(255,255,255,0.6); font-family:monospace; font-size:12px;">{{ stavka.radni_sati }}</div>
-          <div style="width:130px; text-align:right; color:#60a5fa; font-family:monospace; font-size:13px; font-weight:700;">{{ stavka.bruto_placa|floatformat:2 }}</div>
           {% endif %}
-
-          <div style="width:100px; text-align:right; color:#fbbf24; font-family:monospace; font-size:13px; font-weight:600;">{{ stavka.doprinosi|floatformat:2 }}</div>
-          <div style="width:100px; text-align:right; color:rgba(255,255,255,0.7); font-family:monospace; font-size:13px;">{{ stavka.neto_placa|floatformat:2 }}</div>
-          <div style="width:90px; text-align:right; color:#f87171; font-family:monospace; font-size:13px;">{{ stavka.porez|floatformat:2 }}</div>
-          <div style="width:110px; text-align:right; color:#34d399; font-family:monospace; font-size:14px; font-weight:700;">{{ stavka.neto_za_isplatu|floatformat:2 }}</div>
-
-          <!-- AKCIJE -->
-          <div style="width:120px; display:flex; gap:4px; justify-content:flex-end; align-items:center;">
-            <a href="{% url 'mip_zaposlenik' obracun.id stavka.id %}" target="_blank"
-              style="background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.2); border-radius:7px; padding:4px 7px; font-size:11px; text-decoration:none; white-space:nowrap;">MIP</a>
-            <a href="{% url 'mip_xml_zaposlenik' obracun.id stavka.id %}"
-              style="background:rgba(52,211,153,0.1); color:#34d399; border:1px solid rgba(52,211,153,0.2); border-radius:7px; padding:4px 7px; font-size:11px; text-decoration:none; white-space:nowrap;">XML</a>
-            {% if obracun.status != 'zakljucen' %}
-            <form method="post" onsubmit="return confirm('Ukloniti zaposlenika?')">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="obrisi_stavku">
-              <input type="hidden" name="stavka_id" value="{{ stavka.id }}">
-              <button type="submit" style="background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:7px; padding:4px 8px; font-size:12px; cursor:pointer;">×</button>
-            </form>
-            {% endif %}
-          </div>
-
         </div>
-        {% empty %}
-        <div style="text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:40px 20px;">Nema zaposlenika u obračunu.</div>
-        {% endfor %}
+      </div>
 
-        <!-- FOOTER UKUPNO -->
-        {% if stavke %}
-        <div style="border-top:2px solid rgba(255,255,255,0.15); padding:12px 16px; display:flex; background:rgba(255,255,255,0.04); gap:8px; align-items:center;">
-          <div style="flex:1; color:rgba(255,255,255,0.5); font-size:12px; font-weight:600; font-family:monospace;">UKUPNO ({{ stavke|length }} zaposlenika)</div>
-          <div style="width:90px;"></div>
-          <div style="width:130px; text-align:right; color:#60a5fa; font-family:monospace; font-weight:700; font-size:13px;">{{ obracun.ukupno_bruto|floatformat:2 }}</div>
-          <div style="width:100px;"></div>
-          <div style="width:100px;"></div>
-          <div style="width:90px;"></div>
-          <div style="width:110px; text-align:right; color:#34d399; font-family:monospace; font-weight:700; font-size:14px;">{{ obracun.ukupno_neto|floatformat:2 }}</div>
-          <div style="width:120px;"></div>
-        </div>
+      <div style="padding:14px 16px;">
+
+        <!-- STAVKE ZARADE TABELA -->
+        {% if stavka.stavke_zarade.all %}
+        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:10px;">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+              <th style="text-align:left; color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.08em; padding:4px 8px;">VRSTA ISPLATE</th>
+              <th style="text-align:right; color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.08em; padding:4px 8px; width:60px;">SATI</th>
+              <th style="text-align:right; color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.08em; padding:4px 8px; width:60px;">%</th>
+              <th style="text-align:right; color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.08em; padding:4px 8px; width:100px;">IZNOS KM</th>
+              {% if obracun.status != 'zakljucen' %}<th style="width:40px;"></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for sz in stavka.stavke_zarade.all %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:6px 8px; color:#fff;">
+                <span style="color:#93c5fd; font-family:monospace; font-size:11px; margin-right:6px;">{{ sz.vrsta_isplate.sifra }}</span>
+                {{ sz.vrsta_isplate.naziv }}
+                {% if sz.vrsta_isplate.koeficijent != 1 %}
+                <span style="color:#fbbf24; font-size:10px; margin-left:4px;">×{{ sz.vrsta_isplate.koeficijent }}</span>
+                {% endif %}
+                {% if not sz.vrsta_isplate.obracunava_doprinose %}
+                <span style="color:rgba(255,255,255,0.3); font-size:10px; margin-left:4px;">(bez dopr.)</span>
+                {% endif %}
+              </td>
+              <td style="padding:6px 8px; text-align:right; color:rgba(255,255,255,0.6); font-family:monospace;">{{ sz.sati|floatformat:0 }}</td>
+              <td style="padding:6px 8px; text-align:right; color:rgba(255,255,255,0.6); font-family:monospace;">{{ sz.postotak|floatformat:2 }}</td>
+              <td style="padding:6px 8px; text-align:right; color:#60a5fa; font-family:monospace; font-weight:700;">{{ sz.iznos|floatformat:2 }}</td>
+              {% if obracun.status != 'zakljucen' %}
+              <td style="padding:4px;">
+                <form method="post" onsubmit="return confirm('Obrisati?')" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="obrisi_stavku_zarade">
+                  <input type="hidden" name="stavka_zarade_id" value="{{ sz.id }}">
+                  <button type="submit" style="background:rgba(220,38,38,0.1); color:#fca5a5; border:1px solid rgba(220,38,38,0.2); border-radius:5px; padding:2px 8px; font-size:12px; cursor:pointer;">×</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="border-top:1px solid rgba(255,255,255,0.1);">
+              <td style="padding:6px 8px; color:rgba(255,255,255,0.5); font-size:11px; font-weight:600;">UKUPNO BRUTO</td>
+              <td style="padding:6px 8px; text-align:right; color:rgba(255,255,255,0.5); font-family:monospace; font-size:11px;">{{ stavka.radni_sati|floatformat:0 }}</td>
+              <td></td>
+              <td style="padding:6px 8px; text-align:right; color:#60a5fa; font-family:monospace; font-weight:700;">{{ stavka.ukupno_bruto|floatformat:2 }}</td>
+              {% if obracun.status != 'zakljucen' %}<td></td>{% endif %}
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div style="color:rgba(255,255,255,0.2); font-size:12px; padding:6px 0 10px;">Nema stavki zarade. Dodajte ispod.</div>
         {% endif %}
 
+        <!-- OBRAČUN SAŽETAK -->
+        <div style="display:flex; gap:20px; flex-wrap:wrap; padding:8px 0; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; margin-bottom:12px;">
+          <div style="color:rgba(255,255,255,0.4);">Doprinosi 31%: <span style="color:#fbbf24; font-family:monospace; font-weight:600;">{{ stavka.doprinosi|floatformat:2 }}</span></div>
+          <div style="color:rgba(255,255,255,0.4);">Neto plaća: <span style="color:rgba(255,255,255,0.7); font-family:monospace;">{{ stavka.neto_placa|floatformat:2 }}</span></div>
+          <div style="color:rgba(255,255,255,0.4);">Lični odbitak: <span style="color:rgba(255,255,255,0.7); font-family:monospace;">{{ stavka.licni_odbitak|floatformat:2 }}</span></div>
+          <div style="color:rgba(255,255,255,0.4);">Porez 10%: <span style="color:#f87171; font-family:monospace;">{{ stavka.porez|floatformat:2 }}</span></div>
+        </div>
+
+        <!-- FORMA ZA DODAVANJE VRSTE ISPLATE -->
+        {% if obracun.status != 'zakljucen' %}
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:12px;">
+          <div style="color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:10px;">DODAJ STAVKU ZARADE</div>
+          <form method="post" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="dodaj_stavku_zarade">
+            <input type="hidden" name="stavka_id" value="{{ stavka.id }}">
+
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:160px; flex:1;">
+              <label style="color:rgba(255,255,255,0.3); font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">VRSTA ISPLATE</label>
+              <select name="vrsta_isplate_id" required style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px !important; color:#fff !important; font-family:'Inter',sans-serif !important; font-size:12px !important; padding:7px 10px !important; outline:none !important; appearance:none !important;">
+                <option value="">— Odaberi —</option>
+                {% for v in vrste_isplate %}
+                <option value="{{ v.id }}">{{ v.sifra }} — {{ v.naziv }} (×{{ v.koeficijent }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; width:70px;">
+              <label style="color:rgba(255,255,255,0.3); font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">SATI</label>
+              <input type="number" name="sati" value="0" step="0.5" min="0"
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:7px 8px !important; outline:none !important; width:100% !important; text-align:right !important; box-sizing:border-box !important;">
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; width:70px;">
+              <label style="color:rgba(255,255,255,0.3); font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">%</label>
+              <input type="number" name="postotak" value="0.00" step="0.01" min="0"
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:7px 8px !important; outline:none !important; width:100% !important; text-align:right !important; box-sizing:border-box !important;">
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; width:100px;">
+              <label style="color:rgba(255,255,255,0.3); font-size:9px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">IZNOS KM</label>
+              <input type="number" name="iznos" value="0.00" step="0.01" min="0"
+                style="background:rgba(255,255,255,0.07) !important; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px !important; color:#fff !important; font-family:monospace !important; font-size:12px !important; padding:7px 8px !important; outline:none !important; width:100% !important; text-align:right !important; box-sizing:border-box !important;">
+            </div>
+
+            <button type="submit" style="background:#2563eb !important; color:#fff !important; border:none !important; border-radius:8px !important; padding:8px 16px !important; font-size:12px !important; font-weight:600 !important; cursor:pointer !important; font-family:'Inter',sans-serif !important; white-space:nowrap !important;">+ Dodaj</button>
+          </form>
+        </div>
+        {% endif %}
       </div>
     </div>
+    {% empty %}
+    <div style="text-align:center; color:rgba(255,255,255,0.2); font-size:13px; padding:60px 20px;">Nema zaposlenika. Dodajte gore.</div>
+    {% endfor %}
+
   </div>
 </div>
 
@@ -182,12 +222,7 @@
 .up-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; }
 .up-breadcrumb a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:12px; }
 .up-title { color:#fff; font-size:22px; font-weight:700; }
-.up-th { color:rgba(255,255,255,0.3); font-size:10px; font-weight:600; letter-spacing:0.1em; white-space:nowrap; }
-
-@media (max-width: 768px) {
-  .up-page { padding:80px 12px 40px; }
-  .up-header { flex-direction:column; }
-}
+@media (max-width:768px) { .up-page { padding:80px 12px 40px; } .up-header { flex-direction:column; } }
 </style>
 
 <script>

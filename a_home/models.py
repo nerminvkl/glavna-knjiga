@@ -29,6 +29,37 @@ class Entitet(models.TextChoices):
     BRCKO  = '03', 'Brčko'
 
 
+class VrstaIsplate(models.Model):
+    partner       = models.ForeignKey('PoslovniPartner', on_delete=models.CASCADE, related_name='vrste_isplate')
+    sifra         = models.CharField(max_length=10, verbose_name="Šifra")
+    naziv         = models.CharField(max_length=100, verbose_name="Naziv")
+    koeficijent   = models.DecimalField(max_digits=5, decimal_places=2, default=1, verbose_name="Koeficijent")
+    obracunava_doprinose = models.BooleanField(default=True, verbose_name="Doprinosi se obračunavaju")
+    aktivan       = models.BooleanField(default=True, verbose_name="Aktivan")
+
+    class Meta:
+        unique_together = ('partner', 'sifra')
+        ordering = ['sifra']
+        verbose_name = "Vrsta isplate"
+        verbose_name_plural = "Vrste isplate"
+
+    def __str__(self):
+        return f"{self.sifra} — {self.naziv}"
+
+
+class StavkaVrsteIsplate(models.Model):
+    stavka_obracuna = models.ForeignKey('StavkaObracuna', on_delete=models.CASCADE, related_name='vrste')
+    vrsta_isplate   = models.ForeignKey(VrstaIsplate, on_delete=models.PROTECT)
+    sati            = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    iznos           = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Stavka vrste isplate"
+
+    def __str__(self):
+        return f"{self.vrsta_isplate} — {self.iznos}"
+
+
 class PoslovniPartner(models.Model):
     # Osnovno
     sifra              = models.CharField(max_length=20, unique=True, verbose_name="Šifra partnera")
@@ -628,13 +659,36 @@ class StavkaObracuna(models.Model):
     def __str__(self):
         return f"{self.zaposlenik} | {self.obracun}"
 
+    def _ima_stavke_zarade(self):
+        """Provjeri da li ima unesenih stavki zarade."""
+        try:
+            return self.stavke_zarade.exists()
+        except:
+            return False
+
     @property
     def ukupno_bruto(self):
+        """Ako ima stavke zarade, saberi iznose. Inače koristi bruto_placa."""
+        if self._ima_stavke_zarade():
+            return sum(
+                sz.iznos for sz in self.stavke_zarade.all()
+            )
         return self.bruto_placa + self.druge_koristi
 
     @property
+    def ukupno_bruto_doprinosi(self):
+        """Bruto koji ulazi u obračun doprinosa (samo stavke koje obračunavaju doprinose)."""
+        if self._ima_stavke_zarade():
+            return sum(
+                sz.iznos for sz in self.stavke_zarade.filter(
+                    vrsta_isplate__obracunava_doprinose=True
+                )
+            )
+        return self.bruto_placa
+
+    @property
     def doprinosi(self):
-        return (self.ukupno_bruto * self.STOPA_DOPRINOSA).quantize(Decimal('0.01'))
+        return (self.ukupno_bruto_doprinosi * self.STOPA_DOPRINOSA).quantize(Decimal('0.01'))
 
     @property
     def neto_placa(self):
@@ -656,3 +710,28 @@ class StavkaObracuna(models.Model):
     @property
     def neto_za_isplatu(self):
         return (self.neto_placa - self.porez).quantize(Decimal('0.01'))
+    
+class StavkaZarade(models.Model):
+    """Detaljna stavka zarade po vrsti isplate za jednog zaposlenika."""
+    stavka_obracuna = models.ForeignKey(
+        StavkaObracuna,
+        on_delete=models.CASCADE,
+        related_name='stavke_zarade',
+        verbose_name="Stavka obračuna"
+    )
+    vrsta_isplate = models.ForeignKey(
+        VrstaIsplate,
+        on_delete=models.PROTECT,
+        verbose_name="Vrsta isplate"
+    )
+    sati       = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Sati")
+    postotak   = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Postotak")
+    iznos      = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Iznos")
+
+    class Meta:
+        ordering = ['vrsta_isplate__sifra']
+        verbose_name = "Stavka zarade"
+        verbose_name_plural = "Stavke zarade"
+
+    def __str__(self):
+        return f"{self.vrsta_isplate} — {self.iznos}"

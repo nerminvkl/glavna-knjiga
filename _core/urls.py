@@ -114,6 +114,9 @@ urlpatterns = [
     path('place/<int:obracun_id>/obrisi/', obrisi_obracun_place, name='obrisi_obracun_place'),
     path('place/<int:obracun_id>/print/', print_obracun_place, name='print_obracun_place'),
     path('place/<int:obracun_id>/xlsx/', export_obracun_place_xlsx, name='export_obracun_place_xlsx'),
+    path('glavna-knjiga/<int:partner_id>/vrste-isplate/', vrste_isplate_view, name='vrste_isplate'),
+    path('vrsta-isplate/<int:pk>/obrisi/', vrsta_isplate_delete, name='vrsta_isplate_delete'),
+    path('place/<int:obracun_id>/stavka/<int:stavka_id>/platna-lista/', print_platna_lista, name='platna_lista'),
 
     #mip obrazac
     path('place/<int:obracun_id>/mip/', mip_view, name='mip_obracun'),

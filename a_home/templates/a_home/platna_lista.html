@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <title>Platna lista — {{ stavka.zaposlenik.prezime }} {{ stavka.zaposlenik.ime }}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Times New Roman', serif; font-size:10pt; color:#000; background:#fff; padding:15mm 20mm; }
+    .no-print { margin-bottom:16px; display:flex; gap:10px; }
+
+    .header { margin-bottom:16px; }
+    .firma-naziv { font-size:11pt; font-weight:bold; }
+    .firma-sub { font-size:10pt; }
+
+    .naslov { text-align:center; font-size:13pt; font-weight:bold; font-style:italic; margin:12px 0; }
+
+    .info-grid { display:flex; justify-content:space-between; margin-bottom:12px; font-size:9.5pt; }
+    .info-left { display:flex; flex-direction:column; gap:2px; }
+    .info-right { display:flex; flex-direction:column; gap:2px; text-align:right; }
+    .info-bold { font-weight:bold; }
+
+    .divider { border:none; border-top:1px solid #000; margin:8px 0; }
+
+    .section-title { font-style:italic; font-weight:bold; font-size:10.5pt; margin:10px 0 4px; }
+
+    .col-headers { display:flex; font-size:9pt; font-weight:bold; padding:2px 0; border-bottom:1px solid #000; margin-bottom:2px; }
+    .col-opis { flex:1; }
+    .col-sati { width:80px; text-align:right; }
+    .col-posto { width:70px; text-align:right; }
+    .col-iznos { width:100px; text-align:right; }
+
+    .stavka-row { display:flex; font-size:9.5pt; padding:2px 0; }
+    .stavka-row.bold { font-weight:bold; border-top:1px solid #000; margin-top:2px; padding-top:3px; }
+
+    .ukupno-row { display:flex; font-size:10pt; font-weight:bold; font-style:italic; padding:3px 0; border-top:1px solid #000; }
+
+    .footer { margin-top:30px; display:flex; justify-content:space-between; font-size:9.5pt; }
+    .print-footer { margin-top:20px; border-top:1px solid #ccc; padding-top:6px; font-size:8pt; color:#666; display:flex; justify-content:space-between; }
+
+    @media print {
+      body { padding:10mm 15mm; }
+      .no-print { display:none !important; }
+      @page { margin:10mm; size:A4; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:8px 20px;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;">🖨 Štampaj</button>
+    <button onclick="window.close(); history.back();" style="background:#eee;border:1px solid #ccc;padding:8px 16px;font-size:12px;border-radius:4px;cursor:pointer;">✕ Zatvori</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="firma-naziv">{{ partner.naziv_1 }}</div>
+    <div class="firma-sub">{{ partner.mjesto }}</div>
+    {% if partner.ulica %}<div class="firma-sub">{{ partner.ulica }}</div>{% endif %}
+    {% if partner.jib %}<div class="firma-sub">ID/PDV-broj &nbsp; {{ partner.jib }}</div>{% endif %}
+  </div>
+
+  <div class="naslov">Lista isplate plaće za &nbsp; {{ obracun.mjesec|stringformat:"02d" }}/{{ obracun.godina.godina }}</div>
+
+  <hr class="divider">
+
+  <!-- INFO GRID -->
+  <div class="info-grid">
+    <div class="info-left">
+      <div style="font-size:11pt; font-weight:bold; margin-bottom:4px;">
+        {{ stavka.zaposlenik.zaposlenik_broj|default:"" }}
+        &nbsp;
+        {{ stavka.zaposlenik.prezime }}<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;{{ stavka.zaposlenik.ime }}
+      </div>
+      {% if stavka.zaposlenik.adresa %}
+      <div>Adresa {{ stavka.zaposlenik.adresa }}</div>
+      {% endif %}
+    </div>
+    <div class="info-right">
+      {% if stavka.zaposlenik.pozicija %}
+      <div>Radno mjesto &nbsp;<span class="info-bold">{{ stavka.zaposlenik.pozicija }}</span></div>
+      {% endif %}
+      {% if stavka.zaposlenik.jmb %}
+      <div>JMBG &nbsp;<span class="info-bold">{{ stavka.zaposlenik.jmb }}</span></div>
+      {% endif %}
+      <div>Osobni odbitak<span class="info-bold">{{ stavka.licni_odbitak|floatformat:2 }} KM</span></div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- KOLONE HEADER -->
+  <div class="col-headers">
+    <div class="col-opis">Opis</div>
+    <div class="col-sati">Sati / Postotak</div>
+    <div class="col-posto"></div>
+    <div class="col-iznos">Iznos</div>
+  </div>
+
+  <!-- VRSTE ZARADE -->
+  <div class="section-title">Vrste zarade</div>
+  {% for sz in stavke_zarade %}
+  <div class="stavka-row">
+    <div class="col-opis">{{ sz.vrsta_isplate.naziv }}</div>
+    <div class="col-sati">{{ sz.sati|floatformat:0 }}</div>
+    <div class="col-posto">{{ sz.postotak|floatformat:2 }}</div>
+    <div class="col-iznos">{{ sz.iznos|floatformat:2 }}</div>
+  </div>
+  {% empty %}
+  <div class="stavka-row">
+    <div class="col-opis">Osnovna plaća</div>
+    <div class="col-sati">{{ stavka.radni_sati|floatformat:0 }}</div>
+    <div class="col-posto">0,00</div>
+    <div class="col-iznos">{{ stavka.bruto_placa|floatformat:2 }}</div>
+  </div>
+  {% endfor %}
+  <div class="ukupno-row">
+    <div class="col-opis">Ukupno</div>
+    <div class="col-sati">{{ stavka.radni_sati|floatformat:0 }}</div>
+    <div class="col-posto"></div>
+    <div class="col-iznos">{{ stavka.ukupno_bruto|floatformat:2 }}</div>
+  </div>
+
+  <!-- DOPRINOSI -->
+  <div class="section-title" style="margin-top:12px;">Doprinosi</div>
+
+  {% with dopr=stavka.doprinosi %}
+  {% with pio_stopa="17,00" zo_stopa="12,50" nez_stopa="1,50" %}
+
+  {% comment %}PIO iz plaće = 17%{% endcomment %}
+  {% with pio=stavka.ukupno_bruto_doprinosi %}
+  <div class="stavka-row">
+    <div class="col-opis">Invalidsko penziono</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">17,00</div>
+    <div class="col-iznos">{% widthratio stavka.ukupno_bruto_doprinosi 100 17 %}</div>
+  </div>
+  <div class="stavka-row">
+    <div class="col-opis">Zdravstveno osiguranje</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">12,50</div>
+    <div class="col-iznos">{% widthratio stavka.ukupno_bruto_doprinosi 100 1250 %}</div>
+  </div>
+  <div class="stavka-row">
+    <div class="col-opis">Osiguranje od nezaposlenosti</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">1,50</div>
+    <div class="col-iznos">{% widthratio stavka.ukupno_bruto_doprinosi 100 150 %}</div>
+  </div>
+  {% endwith %}
+
+  <div class="ukupno-row">
+    <div class="col-opis">Ukupno</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto"></div>
+    <div class="col-iznos">{{ stavka.doprinosi|floatformat:2 }}</div>
+  </div>
+  {% endwith %}
+  {% endwith %}
+
+  <!-- POREZ NA DOHODAK -->
+  <div class="section-title" style="margin-top:12px;">Porez na dohodak</div>
+
+  <div class="stavka-row">
+    <div class="col-opis">Osobni odbitak</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">0,00</div>
+    <div class="col-iznos">{{ stavka.licni_odbitak|floatformat:2 }}</div>
+  </div>
+  <div class="stavka-row">
+    <div class="col-opis">Porezna osnovica</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">0,00</div>
+    <div class="col-iznos">{{ stavka.osnovica_poreza|floatformat:2 }}</div>
+  </div>
+  <div class="stavka-row">
+    <div class="col-opis">Porez</div>
+    <div class="col-sati">0</div>
+    <div class="col-posto">10,00</div>
+    <div class="col-iznos">{{ stavka.porez|floatformat:2 }}</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- UKUPNO ZA ISPLATU -->
+  <div style="display:flex; justify-content:flex-end; font-size:11pt; font-weight:bold; font-style:italic; margin-top:8px;">
+    <div style="margin-right:20px;">Ukupno za isplatu</div>
+    <div>{{ stavka.neto_za_isplatu|floatformat:2 }}</div>
+  </div>
+
+  <!-- POTPISI -->
+  <div class="footer">
+    <div>
+      <div style="margin-bottom:30px;">Obračunao:</div>
+      <div style="border-top:1px solid #000; width:180px; padding-top:4px;">________________________</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="margin-bottom:30px;">Potpis primaoca</div>
+      <div style="border-top:1px solid #000; width:180px; padding-top:4px;">________________________</div>
+    </div>
+  </div>
+
+  <div class="print-footer">
+    <span>MNM LOGIC — Sistem za upravljanje poslovanjem</span>
+    <span>Štampano: {% now "d.m.Y H:i" %}</span>
+  </div>
+
+</body>
+</html>

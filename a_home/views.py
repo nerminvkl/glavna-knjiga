@@ -20,7 +20,7 @@ from django.conf import settings
 from .models import (
     Inventura, PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
     StavkaKnjizenja, Konto, SintetickiKonto, AnalitickiKonto,
-    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure, Zaposlenik, ObracunPlace, StavkaObracuna, PartnerFirme
+    Kalkulacija, StavkaKalkulacije, Porez, Artikal, KorisnickePostavke, GrupaArtikla, Inventura, StavkaInventure, Zaposlenik, ObracunPlace, StavkaObracuna, PartnerFirme, VrstaIsplate, StavkaZarade
 )
 from .forms import PoslovnaGodinaForm, PoslovniPartnerForm, ArtikalForm
 
@@ -1499,6 +1499,173 @@ def analitika_izvjestaj_print(request, partner_id):
 
 from django.db.models import Sum
 
+@login_required
+def vrste_isplate_view(request, partner_id):
+    partner = get_object_or_404(PoslovniPartner, id=partner_id)
+    godina = get_selected_godina(request)
+
+    edit_obj = None
+    edit_id = request.GET.get('edit')
+    if edit_id:
+        edit_obj = get_object_or_404(VrstaIsplate, id=edit_id, partner=partner)
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'save')
+        sifra         = request.POST.get('sifra', '').strip()
+        naziv         = request.POST.get('naziv', '').strip()
+        koeficijent   = request.POST.get('koeficijent', '1')
+        obr_doprinose = request.POST.get('obracunava_doprinose') == 'on'
+        aktivan       = request.POST.get('aktivan') == 'on'
+
+        from decimal import Decimal
+        try:
+            kof = Decimal(koeficijent)
+        except:
+            kof = Decimal('1')
+
+        if edit_obj:
+            edit_obj.sifra = sifra
+            edit_obj.naziv = naziv
+            edit_obj.koeficijent = kof
+            edit_obj.obracunava_doprinose = obr_doprinose
+            edit_obj.aktivan = aktivan
+            edit_obj.save()
+        else:
+            VrstaIsplate.objects.create(
+                partner=partner,
+                sifra=sifra,
+                naziv=naziv,
+                koeficijent=kof,
+                obracunava_doprinose=obr_doprinose,
+                aktivan=aktivan,
+            )
+        return redirect('vrste_isplate', partner_id=partner_id)
+
+    lista = VrstaIsplate.objects.filter(partner=partner).order_by('sifra')
+    return render(request, 'a_home/vrste_isplate.html', {
+        'partner': partner,
+        'godina': godina,
+        'lista': lista,
+        'edit_obj': edit_obj,
+        'show_header': False,
+    })
+
+
+@login_required
+def uredi_obracun_place(request, obracun_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner = obracun.partner
+    godina = obracun.godina
+    stavke = obracun.stavke.select_related('zaposlenik').prefetch_related(
+        'stavke_zarade__vrsta_isplate'
+    ).all()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'dodaj_stavku_zarade':
+            stavka_id = request.POST.get('stavka_id')
+            vrsta_id  = request.POST.get('vrsta_isplate_id')
+            sati      = request.POST.get('sati', 0) or 0
+            postotak  = request.POST.get('postotak', 0) or 0
+            iznos     = request.POST.get('iznos', 0) or 0
+
+            stavka = get_object_or_404(StavkaObracuna, id=stavka_id)
+            vrsta  = get_object_or_404(VrstaIsplate, id=vrsta_id, partner=partner)
+
+            StavkaZarade.objects.create(
+                stavka_obracuna=stavka,
+                vrsta_isplate=vrsta,
+                sati=sati,
+                postotak=postotak,
+                iznos=iznos,
+            )
+            # Ažuriraj bruto_placa u stavci
+            stavka.bruto_placa = sum(
+                sz.iznos for sz in stavka.stavke_zarade.filter(
+                    vrsta_isplate__obracunava_doprinose=True
+                )
+            )
+            stavka.druge_koristi = sum(
+                sz.iznos for sz in stavka.stavke_zarade.filter(
+                    vrsta_isplate__obracunava_doprinose=False
+                )
+            )
+            stavka.save()
+
+        elif action == 'obrisi_stavku_zarade':
+            sz_id = request.POST.get('stavka_zarade_id')
+            sz = get_object_or_404(StavkaZarade, id=sz_id)
+            stavka = sz.stavka_obracuna
+            sz.delete()
+            # Ažuriraj bruto
+            stavka.bruto_placa = sum(
+                s.iznos for s in stavka.stavke_zarade.filter(
+                    vrsta_isplate__obracunava_doprinose=True
+                )
+            )
+            stavka.druge_koristi = sum(
+                s.iznos for s in stavka.stavke_zarade.filter(
+                    vrsta_isplate__obracunava_doprinose=False
+                )
+            )
+            stavka.save()
+
+        elif action == 'update_stavka':
+            stavka_id = request.POST.get('stavka_id')
+            stavka = get_object_or_404(StavkaObracuna, id=stavka_id)
+            stavka.radni_sati = request.POST.get('radni_sati', stavka.radni_sati)
+            stavka.datum_isplate = request.POST.get('datum_isplate') or None
+            stavka.napomena = request.POST.get('napomena', '')
+            stavka.save()
+
+        elif action == 'dodaj_zaposlenika':
+            z_id = request.POST.get('zaposlenik_id')
+            z = get_object_or_404(Zaposlenik, id=z_id, partner=partner)
+            StavkaObracuna.objects.get_or_create(
+                obracun=obracun, zaposlenik=z,
+                defaults={'radni_sati': 176}
+            )
+
+        elif action == 'obrisi_stavku':
+            stavka_id = request.POST.get('stavka_id')
+            get_object_or_404(StavkaObracuna, id=stavka_id).delete()
+
+        elif action == 'zakljuci':
+            obracun.status = 'zakljucen'
+            obracun.save()
+
+        elif action == 'otvori':
+            obracun.status = 'nacrt'
+            obracun.save()
+
+        return redirect('uredi_obracun_place', obracun_id=obracun.id)
+
+    vrste_isplate = VrstaIsplate.objects.filter(partner=partner, aktivan=True).order_by('sifra')
+    vec_dodani = stavke.values_list('zaposlenik_id', flat=True)
+    dostupni_zaposlenici = Zaposlenik.objects.filter(
+        partner=partner, status='aktivan'
+    ).exclude(id__in=vec_dodani)
+
+    return render(request, 'a_home/uredi_obracun_place.html', {
+        'obracun': obracun,
+        'partner': partner,
+        'godina': godina,
+        'stavke': stavke,
+        'vrste_isplate': vrste_isplate,
+        'dostupni_zaposlenici': dostupni_zaposlenici,
+        'show_header': False,
+    })
+
+
+@login_required
+def vrsta_isplate_delete(request, pk):
+    obj = get_object_or_404(VrstaIsplate, pk=pk)
+    partner_id = obj.partner_id
+    if request.method == 'POST':
+        obj.delete()
+    return redirect('vrste_isplate', partner_id=partner_id)
+
 # ── ZAPOSLENICI ───────────────────────────────────────────────────────────────
 @login_required
 def zaposlenici_view(request, partner_id):
@@ -1646,64 +1813,6 @@ def novi_obracun_place(request, partner_id):
         'godina': godina,
         'mjeseci': range(1, 13),
         'today': datetime.date.today(),
-        'show_header': False,
-    })
-
-
-@login_required
-def uredi_obracun_place(request, obracun_id):
-    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
-    partner = obracun.partner
-    godina = obracun.godina
-    stavke = obracun.stavke.select_related('zaposlenik').all()
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-
-        if action == 'update_stavka':
-            stavka_id = request.POST.get('stavka_id')
-            stavka = get_object_or_404(StavkaObracuna, id=stavka_id)
-            stavka.bruto_placa = request.POST.get('bruto_placa', 0) or 0
-            stavka.druge_koristi = request.POST.get('druge_koristi', 0) or 0
-            stavka.radni_sati = request.POST.get('radni_sati', 0) or 0
-            stavka.sati_bolovanja = request.POST.get('sati_bolovanja', 0) or 0
-            stavka.napomena = request.POST.get('napomena', '')
-            stavka.save()
-
-        elif action == 'dodaj_zaposlenika':
-            z_id = request.POST.get('zaposlenik_id')
-            z = get_object_or_404(Zaposlenik, id=z_id, partner=partner)
-            StavkaObracuna.objects.get_or_create(
-                obracun=obracun, zaposlenik=z,
-                defaults={'radni_sati': 176}
-            )
-
-        elif action == 'obrisi_stavku':
-            stavka_id = request.POST.get('stavka_id')
-            get_object_or_404(StavkaObracuna, id=stavka_id).delete()
-
-        elif action == 'zakljuci':
-            obracun.status = 'zakljucen'
-            obracun.save()
-
-        elif action == 'otvori':
-            obracun.status = 'nacrt'
-            obracun.save()
-
-        return redirect('uredi_obracun_place', obracun_id=obracun.id)
-
-    # Zaposlenici koji nisu u obračunu
-    vec_dodani = stavke.values_list('zaposlenik_id', flat=True)
-    dostupni_zaposlenici = Zaposlenik.objects.filter(
-        partner=partner, status='aktivan'
-    ).exclude(id__in=vec_dodani)
-
-    return render(request, 'a_home/uredi_obracun_place.html', {
-        'obracun': obracun,
-        'partner': partner,
-        'godina': godina,
-        'stavke': stavke,
-        'dostupni_zaposlenici': dostupni_zaposlenici,
         'show_header': False,
     })
 
@@ -2231,9 +2340,13 @@ def mip_xml_zaposlenik(request, obracun_id, stavka_id):
 def mip_pdf(request, obracun_id):
     from django.http import HttpResponse
     from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import BooleanObject, NameObject
     from decimal import Decimal
     from datetime import date as date_type
-    import io, os
+    import io, os, logging
+    import fitz  # pip install pymupdf
+
+    logger = logging.getLogger(__name__)
 
     obracun = get_object_or_404(ObracunPlace, id=obracun_id)
     partner = obracun.partner
@@ -2256,23 +2369,21 @@ def mip_pdf(request, obracun_id):
     fields = {}
 
     # ── POREZNI PERIOD ───────────────────────────────────────────────────
-    # Mjesec — 2 cifre u zasebnim kutijama
     m = f"{obracun.mjesec:02d}"
-    fields['4']             = m[0]   # npr. '0'
-    fields['undefined_3']   = m[1]   # npr. '2'  → 02
+    fields['4']           = m[0]
+    fields['undefined_3'] = m[1]
 
-    # Godina — 4 cifre u zasebnim kutijama
-    g = str(obracun.godina.godina)   # npr. '2026'
-    fields['4_4'] = g[0]   # '2'
-    fields['4_6'] = g[1]   # '0'
-    fields['4_7'] = g[2]   # '2'
-    fields['4_9'] = g[3]   # '6'
+    g = str(obracun.godina.godina)
+    fields['4_4'] = g[0]
+    fields['4_6'] = g[1]
+    fields['4_7'] = g[2]
+    fields['4_9'] = g[3]
 
     # ── DIO 1 — Poslodavac ──────────────────────────────────────────────
-    fields['undefined_2']                                               = getattr(partner, 'jib', '') or ''
-    fields['2 Naziv']                                                   = partner.naziv_1
-    fields['3 Šifra djelatnosti']                                       = getattr(partner, 'sifra_djelatnosti', '') or ''
-    fields['4 Broj zaposlenih']                                         = str(len(stavke))
+    fields['undefined_2']                                                = getattr(partner, 'jib', '') or ''
+    fields['2 Naziv']                                                    = partner.naziv_1
+    fields['3 Šifra djelatnosti']                                        = getattr(partner, 'sifra_djelatnosti', '') or ''
+    fields['4 Broj zaposlenih']                                          = str(len(stavke))
 
     # ── DIO 1 — Ukupni iznosi ───────────────────────────────────────────
     ukupan_prihod    = sum(s.ukupno_bruto  for s in stavke)
@@ -2280,82 +2391,78 @@ def mip_pdf(request, obracun_id):
     ukupni_licni     = sum(s.licni_odbitak for s in stavke)
     ukupni_porez     = sum(s.porez         for s in stavke)
 
-    fields['5 Ukupan prihod zbir kol10 sa svih listova']               = f"{ukupan_prihod:.2f}"
-    fields['6 Ukupan iznos doprinosa zbir kol 15 sa svih listova']     = f"{ukupni_doprinosi:.2f}"
-    fields['7 Ukupan iznos osobnog odbitka zbir kol18 sa svih listova']= f"{ukupni_licni:.2f}"
-    fields['8  Ukupan iznos poreza zbir kol 20 sa svih listova']       = f"{ukupni_porez:.2f}"
+    fields['5 Ukupan prihod zbir kol10 sa svih listova']                = f"{ukupan_prihod:.2f}"
+    fields['6 Ukupan iznos doprinosa zbir kol 15 sa svih listova']      = f"{ukupni_doprinosi:.2f}"
+    fields['7 Ukupan iznos osobnog odbitka zbir kol18 sa svih listova'] = f"{ukupni_licni:.2f}"
+    fields['8  Ukupan iznos poreza zbir kol 20 sa svih listova']        = f"{ukupni_porez:.2f}"
 
     # ── DIO 3 — Doprinosi na teret poslodavca ───────────────────────────
-    # fill_10=25)PIO, fill_9=26)ZO, fill_8=27)Nez, fill_7=28)DodZO
+    # fill_10=25)PIO, fill_9=26)ZO, fill_8=27)Nez
     d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
     d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
     d3_nez = (ukupan_prihod * STOPA_NEZ_P).quantize(Decimal('0.01'))
     fields['fill_10'] = f"{d3_pio:.2f}"
     fields['fill_9']  = f"{d3_zo:.2f}"
     fields['fill_8']  = f"{d3_nez:.2f}"
-    # fields['fill_7'] = ''  # 28) Dodatni ZO — ostavljamo prazno
 
-    # Datum potpisa
     fields['Datum'] = datum_danas
 
     # ── DIO 2 — Mapiranje kolona po redovima (1–5) ──────────────────────
     #
-    # Precizno mapiranje iz reader.get_fields():
+    # Polja verificirana analizom Rect/MaxLen iz template-a:
     #
-    # kol  naziv     red1    red2    red3    red4    red5
-    #  3   JMB       '3'     '3_2'   '3_3'   '3_4'   '3_5'
-    #  4   Općina    '12_3'  '12_5'  '12_7'  '12_9'  '12_10'
-    #  5   Datum     '5'     '5_2'   '5_3'   '5_4'   '5_5'
-    #  6   Rsati     '6'     '6_2'   '6_3'   '6_4'   '6_5'
-    #  7   Bsati     '7'     '7_2'   '7_3'   '7_4'   '7_5'
-    #  8   Bruto     '8'     '8_2'   '8_3'   '8_4'   '8_5'
-    #  9   Koristi   '9'     '9_2'   '9_3'   '9_4'   '9_5'
-    # 10   Ukupno    '10'    '10_2'  '10_3'  '10_4'  '10_5'
-    # 11   PIO       '11'    '11_2'  '11_3'  '11_4'  '11_5'
-    # 12   Ime       '12'    '12_2'  '12_4'  '12_6'  '12_8'
-    # 13   ZO        '13'    '13_2'  '13_3'  '13_4'  '13_5'
-    # 14   Nez       '14'    '14_2'  '14_3'  '14_4'  '14_5'
-    # 15   Ukdopr    '15'    '15_2'  '15_3'  '15_4'  '15_5'
-    # 16   Prihod    '16'    '16_2'  '16_3'  '16_4'  '16_5'
-    # 17   Kf        '17'    '17_2'  '17_3'  '17_4'  '17_5'
-    # 18   Lični     '18'    '18_2'  '18_3'  '18_4'  '18_5'
-    # 19   Osnov     '19'    '19_2'  '19_3'  '19_4'  '19_5'
-    # 20   Porez     '20'    '20_2'  '20_3'  '20_4'  '20_5'
-    # 21   Br.uveć   '21'    '21_2'  '21_3'  '21_4'  '21_5'
-    # 23   Šifra r.m.'23'    '23_2'  '23_3'  '23_4'  '23_5'
-    # 24   Dopr.staž '24'    '24_2'  '24_3'  '24_4'  '24_5'
-    # Vrsta isp.    '20.0'  '20.1'   —       —       —    (radio/checkbox)
+    # kol   naziv      red1      red2      red3      red4      red5
+    #  3    JMB        '3'       '3_2'     '3_3'     '3_4'     '3_5'
+    #  4    Općina     '12'      '12_3'    '12_5'    '12_7'    '12_9'   (MaxLen=2)
+    #  5    Datum      '5'       '5_2'     '5_3'     '5_4'     '5_5'
+    #  6    Rsati      '6'       '6_2'     '6_3'     '6_4'     '6_5'
+    #  7    Bsati      '7'       '7_2'     '7_3'     '7_4'     '7_5'
+    #  8    Bruto      '8'       '8_2'     '8_3'     '8_4'     '8_5'
+    #  9    Koristi    '9'       '9_2'     '9_3'     '9_4'     '9_5'
+    # 10    Ukupno     '10'      '10_2'    '10_3'    '10_4'    '10_5'
+    # 11    PIO        '11'      '11_2'    '11_3'    '11_4'    '11_5'
+    # 12    Ime        '12_2'    '12_4'    '12_6'    '12_8'    '12_10'
+    # 13    ZO         '13'      '13_2'    '13_3'    '13_4'    '13_5'
+    # 14    Nez        '14'      '14_2'    '14_3'    '14_4'    '14_5'
+    # 15    Ukdopr     '15'      '15_2'    '15_3'    '15_4'    '15_5'
+    # 16    Prihod     '16'      '16_2'    '16_3'    '16_4'    '16_5'
+    # 17    Kf         '17'      '17_2'    '17_3'    '17_4'    '17_5'
+    # 18    Lični      '18'      '18_2'    '18_3'    '18_4'    '18_5'
+    # 19    Osnov      '19'      '19_2'    '19_3'    '19_4'    '19_5'
+    # 20    Porez      '20'      '20_2'    '20_3'    '20_4'    '20_5'
+    # 21    Br.uveć    '21'      '21_2'    '21_3'    '21_4'    '21_5'
+    # 23    Šifra r.m. '23'      '23_2'    '23_3'    '23_4'    '23_5'
+    # 24    Dopr.staž  '24'      '24_2'    '24_3'    '24_4'    '24_5'
+    # Vrsta isplate    '20.0'    '20.1'    —         —         —
 
     col_maps = {
-        'jmb':     ['3',    '3_2',  '3_3',  '3_4',  '3_5' ],
-        'opcina':  ['12_3', '12_5', '12_7', '12_9', '12_10'],
-        'datum':   ['5',    '5_2',  '5_3',  '5_4',  '5_5' ],
-        'rsati':   ['6',    '6_2',  '6_3',  '6_4',  '6_5' ],
-        'bsati':   ['7',    '7_2',  '7_3',  '7_4',  '7_5' ],
-        'bruto':   ['8',    '8_2',  '8_3',  '8_4',  '8_5' ],
-        'koristi': ['9',    '9_2',  '9_3',  '9_4',  '9_5' ],
-        'ukupno':  ['10',   '10_2', '10_3', '10_4', '10_5'],
-        'pio':     ['11',   '11_2', '11_3', '11_4', '11_5'],
-        'ime':     ['12',   '12_2', '12_4', '12_6', '12_8'],
-        'zo':      ['13',   '13_2', '13_3', '13_4', '13_5'],
-        'nez':     ['14',   '14_2', '14_3', '14_4', '14_5'],
-        'ukdopr':  ['15',   '15_2', '15_3', '15_4', '15_5'],
-        'prihod':  ['16',   '16_2', '16_3', '16_4', '16_5'],
-        'kf':      ['17',   '17_2', '17_3', '17_4', '17_5'],
-        'licni':   ['18',   '18_2', '18_3', '18_4', '18_5'],
-        'osnovica':['19',   '19_2', '19_3', '19_4', '19_5'],
-        'porez':   ['20',   '20_2', '20_3', '20_4', '20_5'],
-        'uvsati':  ['21',   '21_2', '21_3', '21_4', '21_5'],
-        'srm':     ['23',   '23_2', '23_3', '23_4', '23_5'],
-        'staz':    ['24',   '24_2', '24_3', '24_4', '24_5'],
+        'jmb':     ['3',    '3_2',   '3_3',   '3_4',   '3_5'  ],
+        'opcina':  ['12',   '12_3',  '12_5',  '12_7',  '12_9' ],
+        'datum':   ['5',    '5_2',   '5_3',   '5_4',   '5_5'  ],
+        'rsati':   ['6',    '6_2',   '6_3',   '6_4',   '6_5'  ],
+        'bsati':   ['7',    '7_2',   '7_3',   '7_4',   '7_5'  ],
+        'bruto':   ['8',    '8_2',   '8_3',   '8_4',   '8_5'  ],
+        'koristi': ['9',    '9_2',   '9_3',   '9_4',   '9_5'  ],
+        'ukupno':  ['10',   '10_2',  '10_3',  '10_4',  '10_5' ],
+        'pio':     ['11',   '11_2',  '11_3',  '11_4',  '11_5' ],
+        'ime':     ['12_2', '12_4',  '12_6',  '12_8',  '12_10'],
+        'zo':      ['13',   '13_2',  '13_3',  '13_4',  '13_5' ],
+        'nez':     ['14',   '14_2',  '14_3',  '14_4',  '14_5' ],
+        'ukdopr':  ['15',   '15_2',  '15_3',  '15_4',  '15_5' ],
+        'prihod':  ['16',   '16_2',  '16_3',  '16_4',  '16_5' ],
+        'kf':      ['17',   '17_2',  '17_3',  '17_4',  '17_5' ],
+        'licni':   ['18',   '18_2',  '18_3',  '18_4',  '18_5' ],
+        'osnovica':['19',   '19_2',  '19_3',  '19_4',  '19_5' ],
+        'porez':   ['20',   '20_2',  '20_3',  '20_4',  '20_5' ],
+        'uvsati':  ['21',   '21_2',  '21_3',  '21_4',  '21_5' ],
+        'srm':     ['23',   '23_2',  '23_3',  '23_4',  '23_5' ],
+        'staz':    ['24',   '24_2',  '24_3',  '24_4',  '24_5' ],
     }
-
     vrsta_fields = ['20.0', '20.1', None, None, None]
 
     for idx, stavka in enumerate(stavke[:5]):
         z = stavka.zaposlenik
 
-        # Izračun doprinosa
         ukupno      = stavka.ukupno_bruto
         pio         = (ukupno * STOPA_PIO).quantize(Decimal('0.01'))
         zo          = (ukupno * STOPA_ZO).quantize(Decimal('0.01'))
@@ -2365,6 +2472,7 @@ def mip_pdf(request, obracun_id):
         licni       = stavka.licni_odbitak
         osnovica    = max(neto - licni, Decimal('0'))
         datum_isp   = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_danas
+        sifra_opcine = str(getattr(z, 'sifra_opcine', '') or '097')[:2]
 
         def sv(col, val):
             lst = col_maps.get(col, [])
@@ -2372,7 +2480,7 @@ def mip_pdf(request, obracun_id):
                 fields[lst[idx]] = str(val)
 
         sv('jmb',      z.jmb or '')
-        sv('opcina',   getattr(z, 'sifra_opcine', '') or '097')
+        sv('opcina',   sifra_opcine)
         sv('datum',    datum_isp)
         sv('rsati',    int(stavka.radni_sati))
         sv('bsati',    int(stavka.sati_bolovanja))
@@ -2391,20 +2499,60 @@ def mip_pdf(request, obracun_id):
         sv('porez',    f"{stavka.porez:.2f}")
         sv('uvsati',   '0')
 
-        # Vrsta isplate — '1' (redovi 1 i 2 imaju radio polje, ostali nemaju)
         if idx < len(vrsta_fields) and vrsta_fields[idx]:
             fields[vrsta_fields[idx]] = '1'
 
-    # ── Output ──────────────────────────────────────────────────────────
+    # ── Popuni polja pypdf-om ────────────────────────────────────────────
     writer.update_page_form_field_values(writer.pages[0], fields, auto_regenerate=True)
 
-    output = io.BytesIO()
-    writer.write(output)
-    output.seek(0)
+    if '/AcroForm' in writer._root_object:
+        writer._root_object['/AcroForm'][NameObject('/NeedAppearances')] = BooleanObject(False)
 
+    filled_bytes = io.BytesIO()
+    writer.write(filled_bytes)
+    filled_bytes.seek(0)
+
+    # ── Generiraj appearance streams sa PyMuPDF ──────────────────────────
+    # fitz update() + save(appearance=True) "peče" tekst u appearance streame
+    # koje SVI PDF vieweri prikazuju (Chrome, Adobe, Edge, Preview, mobilni).
+    # Widgeti se NE brišu (brisanje uklanja i AP streame) — umjesto toga
+    # postavljamo ReadOnly flag da forma bude zaključana.
+    try:
+        doc = fitz.open(stream=filled_bytes.read(), filetype='pdf')
+        for page in doc:
+            for w in page.widgets():
+                if w.field_value and str(w.field_value).strip():
+                    if not w.text_fontsize or w.text_fontsize == 0:
+                        w.text_fontsize = 7
+                    w.field_flags |= 1  # ReadOnly — zaključaj polje
+                    w.update()
+
+        out = io.BytesIO()
+        doc.save(out, appearance=True, garbage=3, deflate=True)
+        doc.close()
+        out.seek(0)
+        pdf_bytes = out.read()
+
+    except Exception as e:
+        logger.error(f"MIP PDF appearance greška: {e}")
+        filled_bytes.seek(0)
+        pdf_bytes = filled_bytes.read()
+
+    # ── Response ────────────────────────────────────────────────────────
     jib      = getattr(partner, 'jib', '') or getattr(partner, 'sifra', 'X')
     filename = f"MIP-{jib}-{obracun.mjesec:02d}-{obracun.godina.godina}.pdf"
 
-    response = HttpResponse(output.read(), content_type='application/pdf')
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+@login_required
+def print_platna_lista(request, obracun_id, stavka_id):
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    stavka = get_object_or_404(StavkaObracuna, id=stavka_id, obracun=obracun)
+    return render(request, 'a_home/platna_lista.html', {
+        'obracun': obracun,
+        'partner': obracun.partner,
+        'stavka': stavka,
+        'stavke_zarade': stavka.stavke_zarade.select_related('vrsta_isplate').all(),
+    })
