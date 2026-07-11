@@ -2087,7 +2087,7 @@ def export_obracun_place_xlsx(request, obracun_id):
 def mip_view(request, obracun_id):
     obracun = get_object_or_404(ObracunPlace, id=obracun_id)
     stavke = obracun.stavke.select_related('zaposlenik').all()
-    return render(request, 'a_home/mip_print.html', {
+    return render(request, 'a_home/mip_pdf.html', {
         'obracun': obracun,
         'partner': obracun.partner,
         'godina': obracun.godina,
@@ -2214,7 +2214,7 @@ def mip_zaposlenik(request, obracun_id, stavka_id):
     obracun = get_object_or_404(ObracunPlace, id=obracun_id)
     stavka = get_object_or_404(StavkaObracuna, id=stavka_id, obracun=obracun)
     partner = obracun.partner
-    return render(request, 'a_home/mip_print.html', {
+    return render(request, 'a_home/mip_pdf.html', {
         'obracun': obracun,
         'partner': partner,
         'godina': obracun.godina,
@@ -2339,14 +2339,10 @@ def mip_xml_zaposlenik(request, obracun_id, stavka_id):
 @login_required
 def mip_pdf(request, obracun_id):
     from django.http import HttpResponse
-    from pypdf import PdfReader, PdfWriter
-    from pypdf.generic import BooleanObject, NameObject
+    from django.template.loader import render_to_string
     from decimal import Decimal
     from datetime import date as date_type
-    import io, os, logging
-    import fitz  # pip install pymupdf
-
-    logger = logging.getLogger(__name__)
+    from weasyprint import HTML
 
     obracun = get_object_or_404(ObracunPlace, id=obracun_id)
     partner = obracun.partner
@@ -2359,108 +2355,18 @@ def mip_pdf(request, obracun_id):
     STOPA_ZO_P  = Decimal('0.020')
     STOPA_NEZ_P = Decimal('0.005')
 
+    def bam(val):
+        """Formatiraj Decimal u BiH format: 1.605,47"""
+        if val is None:
+            val = Decimal('0')
+        s = f"{val:,.2f}"                      # 1,605.47
+        return s.replace(',', 'X').replace('.', ',').replace('X', '.')  # 1.605,47
+
     datum_danas = date_type.today().strftime('%d.%m.%Y')
 
-    template_path = os.path.join(settings.BASE_DIR, 'static', 'pdf', 'mip_template.pdf')
-    reader = PdfReader(template_path)
-    writer = PdfWriter()
-    writer.append(reader)
-
-    fields = {}
-
-    # ── POREZNI PERIOD ───────────────────────────────────────────────────
-    m = f"{obracun.mjesec:02d}"
-    fields['4']           = m[0]
-    fields['undefined_3'] = m[1]
-
-    g = str(obracun.godina.godina)
-    fields['4_4'] = g[0]
-    fields['4_6'] = g[1]
-    fields['4_7'] = g[2]
-    fields['4_9'] = g[3]
-
-    # ── DIO 1 — Poslodavac ──────────────────────────────────────────────
-    fields['undefined_2']                                                = getattr(partner, 'jib', '') or ''
-    fields['2 Naziv']                                                    = partner.naziv_1
-    fields['3 Šifra djelatnosti']                                        = getattr(partner, 'sifra_djelatnosti', '') or ''
-    fields['4 Broj zaposlenih']                                          = str(len(stavke))
-
-    # ── DIO 1 — Ukupni iznosi ───────────────────────────────────────────
-    ukupan_prihod    = sum(s.ukupno_bruto  for s in stavke)
-    ukupni_doprinosi = sum(s.doprinosi     for s in stavke)
-    ukupni_licni     = sum(s.licni_odbitak for s in stavke)
-    ukupni_porez     = sum(s.porez         for s in stavke)
-
-    fields['5 Ukupan prihod zbir kol10 sa svih listova']                = f"{ukupan_prihod:.2f}"
-    fields['6 Ukupan iznos doprinosa zbir kol 15 sa svih listova']      = f"{ukupni_doprinosi:.2f}"
-    fields['7 Ukupan iznos osobnog odbitka zbir kol18 sa svih listova'] = f"{ukupni_licni:.2f}"
-    fields['8  Ukupan iznos poreza zbir kol 20 sa svih listova']        = f"{ukupni_porez:.2f}"
-
-    # ── DIO 3 — Doprinosi na teret poslodavca ───────────────────────────
-    # fill_10=25)PIO, fill_9=26)ZO, fill_8=27)Nez
-    d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
-    d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
-    d3_nez = (ukupan_prihod * STOPA_NEZ_P).quantize(Decimal('0.01'))
-    fields['fill_10'] = f"{d3_pio:.2f}"
-    fields['fill_9']  = f"{d3_zo:.2f}"
-    fields['fill_8']  = f"{d3_nez:.2f}"
-
-    fields['Datum'] = datum_danas
-
-    # ── DIO 2 — Mapiranje kolona po redovima (1–5) ──────────────────────
-    #
-    # Polja verificirana analizom Rect/MaxLen iz template-a:
-    #
-    # kol   naziv      red1      red2      red3      red4      red5
-    #  3    JMB        '3'       '3_2'     '3_3'     '3_4'     '3_5'
-    #  4    Općina     '12'      '12_3'    '12_5'    '12_7'    '12_9'   (MaxLen=2)
-    #  5    Datum      '5'       '5_2'     '5_3'     '5_4'     '5_5'
-    #  6    Rsati      '6'       '6_2'     '6_3'     '6_4'     '6_5'
-    #  7    Bsati      '7'       '7_2'     '7_3'     '7_4'     '7_5'
-    #  8    Bruto      '8'       '8_2'     '8_3'     '8_4'     '8_5'
-    #  9    Koristi    '9'       '9_2'     '9_3'     '9_4'     '9_5'
-    # 10    Ukupno     '10'      '10_2'    '10_3'    '10_4'    '10_5'
-    # 11    PIO        '11'      '11_2'    '11_3'    '11_4'    '11_5'
-    # 12    Ime        '12_2'    '12_4'    '12_6'    '12_8'    '12_10'
-    # 13    ZO         '13'      '13_2'    '13_3'    '13_4'    '13_5'
-    # 14    Nez        '14'      '14_2'    '14_3'    '14_4'    '14_5'
-    # 15    Ukdopr     '15'      '15_2'    '15_3'    '15_4'    '15_5'
-    # 16    Prihod     '16'      '16_2'    '16_3'    '16_4'    '16_5'
-    # 17    Kf         '17'      '17_2'    '17_3'    '17_4'    '17_5'
-    # 18    Lični      '18'      '18_2'    '18_3'    '18_4'    '18_5'
-    # 19    Osnov      '19'      '19_2'    '19_3'    '19_4'    '19_5'
-    # 20    Porez      '20'      '20_2'    '20_3'    '20_4'    '20_5'
-    # 21    Br.uveć    '21'      '21_2'    '21_3'    '21_4'    '21_5'
-    # 23    Šifra r.m. '23'      '23_2'    '23_3'    '23_4'    '23_5'
-    # 24    Dopr.staž  '24'      '24_2'    '24_3'    '24_4'    '24_5'
-    # Vrsta isplate    '20.0'    '20.1'    —         —         —
-
-    col_maps = {
-        'jmb':     ['3',    '3_2',   '3_3',   '3_4',   '3_5'  ],
-        'opcina':  ['12',   '12_3',  '12_5',  '12_7',  '12_9' ],
-        'datum':   ['5',    '5_2',   '5_3',   '5_4',   '5_5'  ],
-        'rsati':   ['6',    '6_2',   '6_3',   '6_4',   '6_5'  ],
-        'bsati':   ['7',    '7_2',   '7_3',   '7_4',   '7_5'  ],
-        'bruto':   ['8',    '8_2',   '8_3',   '8_4',   '8_5'  ],
-        'koristi': ['9',    '9_2',   '9_3',   '9_4',   '9_5'  ],
-        'ukupno':  ['10',   '10_2',  '10_3',  '10_4',  '10_5' ],
-        'pio':     ['11',   '11_2',  '11_3',  '11_4',  '11_5' ],
-        'ime':     ['12_2', '12_4',  '12_6',  '12_8',  '12_10'],
-        'zo':      ['13',   '13_2',  '13_3',  '13_4',  '13_5' ],
-        'nez':     ['14',   '14_2',  '14_3',  '14_4',  '14_5' ],
-        'ukdopr':  ['15',   '15_2',  '15_3',  '15_4',  '15_5' ],
-        'prihod':  ['16',   '16_2',  '16_3',  '16_4',  '16_5' ],
-        'kf':      ['17',   '17_2',  '17_3',  '17_4',  '17_5' ],
-        'licni':   ['18',   '18_2',  '18_3',  '18_4',  '18_5' ],
-        'osnovica':['19',   '19_2',  '19_3',  '19_4',  '19_5' ],
-        'porez':   ['20',   '20_2',  '20_3',  '20_4',  '20_5' ],
-        'uvsati':  ['21',   '21_2',  '21_3',  '21_4',  '21_5' ],
-        'srm':     ['23',   '23_2',  '23_3',  '23_4',  '23_5' ],
-        'staz':    ['24',   '24_2',  '24_3',  '24_4',  '24_5' ],
-    }
-    vrsta_fields = ['20.0', '20.1', None, None, None]
-
-    for idx, stavka in enumerate(stavke[:5]):
+    # ── Redovi zaposlenika ───────────────────────────────────────────────
+    redovi = []
+    for stavka in stavke[:5]:
         z = stavka.zaposlenik
 
         ukupno      = stavka.ukupno_bruto
@@ -2471,74 +2377,66 @@ def mip_pdf(request, obracun_id):
         neto        = ukupno - ukupno_dopr
         licni       = stavka.licni_odbitak
         osnovica    = max(neto - licni, Decimal('0'))
-        datum_isp   = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_danas
-        sifra_opcine = str(getattr(z, 'sifra_opcine', '') or '097')[:2]
 
-        def sv(col, val):
-            lst = col_maps.get(col, [])
-            if idx < len(lst) and lst[idx]:
-                fields[lst[idx]] = str(val)
+        redovi.append({
+            'jmb':            z.jmb or '',
+            'opcina_chars':   list(str(getattr(z, 'sifra_opcine', '') or '097')[:3]),
+            'datum_isplate':  stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_danas,
+            'radni_sati':     bam(Decimal(stavka.radni_sati)),
+            'sati_bolovanja': bam(Decimal(stavka.sati_bolovanja or 0)),
+            'bruto':          bam(stavka.bruto_placa),
+            'koristi':        bam(stavka.druge_koristi or Decimal('0')),
+            'ukupno':         bam(ukupno),
+            'pio':            bam(pio),
+            'ime_prezime':    f"{z.prezime} {z.ime}".upper(),
+            'zo':             bam(zo),
+            'nez':            bam(nez),
+            'ukupno_dopr':    bam(ukupno_dopr),
+            'prihod_umanjen': bam(neto),
+            'kf':             bam(Decimal(str(z.kf_licnog_odbitka))),
+            'licni':          bam(licni),
+            'osnovica':       bam(osnovica),
+            'porez':          bam(stavka.porez),
+        })
 
-        sv('jmb',      z.jmb or '')
-        sv('opcina',   sifra_opcine)
-        sv('datum',    datum_isp)
-        sv('rsati',    int(stavka.radni_sati))
-        sv('bsati',    int(stavka.sati_bolovanja))
-        sv('bruto',    f"{stavka.bruto_placa:.2f}")
-        sv('koristi',  f"{stavka.druge_koristi:.2f}")
-        sv('ukupno',   f"{ukupno:.2f}")
-        sv('pio',      f"{pio:.2f}")
-        sv('ime',      f"{z.prezime} {z.ime}")
-        sv('zo',       f"{zo:.2f}")
-        sv('nez',      f"{nez:.2f}")
-        sv('ukdopr',   f"{ukupno_dopr:.2f}")
-        sv('prihod',   f"{neto:.2f}")
-        sv('kf',       str(z.kf_licnog_odbitka))
-        sv('licni',    f"{licni:.2f}")
-        sv('osnovica', f"{osnovica:.2f}")
-        sv('porez',    f"{stavka.porez:.2f}")
-        sv('uvsati',   '0')
+    # Dopuni prazne redove do 5
+    while len(redovi) < 5:
+        redovi.append(None)
 
-        if idx < len(vrsta_fields) and vrsta_fields[idx]:
-            fields[vrsta_fields[idx]] = '1'
+    # ── Ukupni iznosi ────────────────────────────────────────────────────
+    ukupan_prihod    = sum(s.ukupno_bruto  for s in stavke) or Decimal('0')
+    ukupni_doprinosi = sum(s.doprinosi     for s in stavke) or Decimal('0')
+    ukupni_licni     = sum(s.licni_odbitak for s in stavke) or Decimal('0')
+    ukupni_porez     = sum(s.porez         for s in stavke) or Decimal('0')
 
-    # ── Popuni polja pypdf-om ────────────────────────────────────────────
-    writer.update_page_form_field_values(writer.pages[0], fields, auto_regenerate=True)
+    # ── Dio 3 — doprinosi na teret poslodavca ────────────────────────────
+    d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
+    d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
+    d3_nez = (ukupan_prihod * STOPA_NEZ_P).quantize(Decimal('0.01'))
 
-    if '/AcroForm' in writer._root_object:
-        writer._root_object['/AcroForm'][NameObject('/NeedAppearances')] = BooleanObject(False)
+    # ── Kontekst ─────────────────────────────────────────────────────────
+    context = {
+        'obracun':          obracun,
+        'partner':          partner,
+        'mjesec_str':       f"{obracun.mjesec:02d}",
+        'godina_str':       str(obracun.godina.godina),
+        'jib_chars':        list((getattr(partner, 'jib', '') or '')[:13]),
+        'broj_zaposlenih':  len(stavke),
+        'ukupan_prihod':    bam(ukupan_prihod),
+        'ukupni_doprinosi': bam(ukupni_doprinosi),
+        'ukupni_licni':     bam(ukupni_licni),
+        'ukupni_porez':     bam(ukupni_porez),
+        'redovi':           redovi,
+        'd3_pio':           bam(d3_pio),
+        'd3_zo':            bam(d3_zo),
+        'd3_nez':           bam(d3_nez),
+        'datum_danas':      datum_danas,
+    }
 
-    filled_bytes = io.BytesIO()
-    writer.write(filled_bytes)
-    filled_bytes.seek(0)
+    # ── Render + PDF ─────────────────────────────────────────────────────
+    html_string = render_to_string('a_home/mip_pdf.html', context)
+    pdf_bytes   = HTML(string=html_string).write_pdf()
 
-    # ── Generiraj appearance streams sa PyMuPDF ──────────────────────────
-    # fitz update() + save(appearance=True) "peče" tekst u appearance streame
-    # koje SVI PDF vieweri prikazuju (Chrome, Adobe, Edge, Preview, mobilni).
-    # Widgeti se NE brišu (brisanje uklanja i AP streame) — umjesto toga
-    # postavljamo ReadOnly flag da forma bude zaključana.
-    try:
-        doc = fitz.open(stream=filled_bytes.read(), filetype='pdf')
-        for page in doc:
-            for w in page.widgets():
-                if w.field_value and str(w.field_value).strip():
-                    if not w.text_fontsize or w.text_fontsize == 0:
-                        w.text_fontsize = 7
-                    w.field_flags |= 1  # ReadOnly — zaključaj polje
-                    w.update()
-
-        out = io.BytesIO()
-        doc.save(out, appearance=True, garbage=3, deflate=True)
-        doc.close()
-        out.seek(0)
-        pdf_bytes = out.read()
-
-    except Exception as e:
-        logger.error(f"MIP PDF appearance greška: {e}")
-        filled_bytes.seek(0)
-        pdf_bytes = filled_bytes.read()
-
-    # ── Response ────────────────────────────────────────────────────────
     jib      = getattr(partner, 'jib', '') or getattr(partner, 'sifra', 'X')
     filename = f"MIP-{jib}-{obracun.mjesec:02d}-{obracun.godina.godina}.pdf"
 

@@ -16,3 +16,4 @@ pypdf
 pymupdf
 psycopg2
 gunicorn
+weasyprint
