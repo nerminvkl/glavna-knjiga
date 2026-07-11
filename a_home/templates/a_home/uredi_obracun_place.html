@@ -32,10 +32,10 @@
           style="background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
           📊 Excel
         </a>
-        <a href="{% url 'mip_obracun' obracun.id %}" target="_blank"
-          style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
-          📋 MIP
-        </a>
+        <a href="{% url 'mip_pdf' obracun.id %}"
+  style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); border-radius:7px; padding:5px 8px; font-size:12px; text-decoration:none; white-space:nowrap;">
+  📄 MIP PDF
+</a>
         <a href="{% url 'mip_xml' obracun.id %}"
           style="background:rgba(96,165,250,0.12); color:#93c5fd; border:1px solid rgba(96,165,250,0.25); padding:9px 14px; border-radius:9px; font-size:13px; text-decoration:none; white-space:nowrap;">
           📥 XML

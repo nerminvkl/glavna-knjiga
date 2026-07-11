@@ -1,3 +1,5 @@
+from dataclasses import fields
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
@@ -13,6 +15,7 @@ from django.contrib.auth import logout
 from django.contrib.auth import logout as auth_logout
 import os
 from django.conf import settings as django_settings
+from django.conf import settings
 
 from .models import (
     Inventura, PoslovniPartner, PoslovnaGodina, GlavnaKnjiga, Knjizenje,
@@ -2221,5 +2224,187 @@ def mip_xml_zaposlenik(request, obracun_id, stavka_id):
     filename = f"{jib or 'MIP'}.xml"
 
     response = HttpResponse(xml_content, content_type='application/xml; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+@login_required
+def mip_pdf(request, obracun_id):
+    from django.http import HttpResponse
+    from pypdf import PdfReader, PdfWriter
+    from decimal import Decimal
+    from datetime import date as date_type
+    import io, os
+
+    obracun = get_object_or_404(ObracunPlace, id=obracun_id)
+    partner = obracun.partner
+    stavke  = list(obracun.stavke.select_related('zaposlenik').all())
+
+    STOPA_PIO   = Decimal('0.17')
+    STOPA_ZO    = Decimal('0.1250')
+    STOPA_NEZ   = Decimal('0.015')
+    STOPA_PIO_P = Decimal('0.025')
+    STOPA_ZO_P  = Decimal('0.020')
+    STOPA_NEZ_P = Decimal('0.005')
+
+    datum_danas = date_type.today().strftime('%d.%m.%Y')
+
+    template_path = os.path.join(settings.BASE_DIR, 'static', 'pdf', 'mip_template.pdf')
+    reader = PdfReader(template_path)
+    writer = PdfWriter()
+    writer.append(reader)
+
+    fields = {}
+
+    # ── POREZNI PERIOD ───────────────────────────────────────────────────
+    # Mjesec — 2 cifre u zasebnim kutijama
+    m = f"{obracun.mjesec:02d}"
+    fields['4']             = m[0]   # npr. '0'
+    fields['undefined_3']   = m[1]   # npr. '2'  → 02
+
+    # Godina — 4 cifre u zasebnim kutijama
+    g = str(obracun.godina.godina)   # npr. '2026'
+    fields['4_4'] = g[0]   # '2'
+    fields['4_6'] = g[1]   # '0'
+    fields['4_7'] = g[2]   # '2'
+    fields['4_9'] = g[3]   # '6'
+
+    # ── DIO 1 — Poslodavac ──────────────────────────────────────────────
+    fields['undefined_2']                                               = getattr(partner, 'jib', '') or ''
+    fields['2 Naziv']                                                   = partner.naziv_1
+    fields['3 Šifra djelatnosti']                                       = getattr(partner, 'sifra_djelatnosti', '') or ''
+    fields['4 Broj zaposlenih']                                         = str(len(stavke))
+
+    # ── DIO 1 — Ukupni iznosi ───────────────────────────────────────────
+    ukupan_prihod    = sum(s.ukupno_bruto  for s in stavke)
+    ukupni_doprinosi = sum(s.doprinosi     for s in stavke)
+    ukupni_licni     = sum(s.licni_odbitak for s in stavke)
+    ukupni_porez     = sum(s.porez         for s in stavke)
+
+    fields['5 Ukupan prihod zbir kol10 sa svih listova']               = f"{ukupan_prihod:.2f}"
+    fields['6 Ukupan iznos doprinosa zbir kol 15 sa svih listova']     = f"{ukupni_doprinosi:.2f}"
+    fields['7 Ukupan iznos osobnog odbitka zbir kol18 sa svih listova']= f"{ukupni_licni:.2f}"
+    fields['8  Ukupan iznos poreza zbir kol 20 sa svih listova']       = f"{ukupni_porez:.2f}"
+
+    # ── DIO 3 — Doprinosi na teret poslodavca ───────────────────────────
+    # fill_10=25)PIO, fill_9=26)ZO, fill_8=27)Nez, fill_7=28)DodZO
+    d3_pio = (ukupan_prihod * STOPA_PIO_P).quantize(Decimal('0.01'))
+    d3_zo  = (ukupan_prihod * STOPA_ZO_P).quantize(Decimal('0.01'))
+    d3_nez = (ukupan_prihod * STOPA_NEZ_P).quantize(Decimal('0.01'))
+    fields['fill_10'] = f"{d3_pio:.2f}"
+    fields['fill_9']  = f"{d3_zo:.2f}"
+    fields['fill_8']  = f"{d3_nez:.2f}"
+    # fields['fill_7'] = ''  # 28) Dodatni ZO — ostavljamo prazno
+
+    # Datum potpisa
+    fields['Datum'] = datum_danas
+
+    # ── DIO 2 — Mapiranje kolona po redovima (1–5) ──────────────────────
+    #
+    # Precizno mapiranje iz reader.get_fields():
+    #
+    # kol  naziv     red1    red2    red3    red4    red5
+    #  3   JMB       '3'     '3_2'   '3_3'   '3_4'   '3_5'
+    #  4   Općina    '12_3'  '12_5'  '12_7'  '12_9'  '12_10'
+    #  5   Datum     '5'     '5_2'   '5_3'   '5_4'   '5_5'
+    #  6   Rsati     '6'     '6_2'   '6_3'   '6_4'   '6_5'
+    #  7   Bsati     '7'     '7_2'   '7_3'   '7_4'   '7_5'
+    #  8   Bruto     '8'     '8_2'   '8_3'   '8_4'   '8_5'
+    #  9   Koristi   '9'     '9_2'   '9_3'   '9_4'   '9_5'
+    # 10   Ukupno    '10'    '10_2'  '10_3'  '10_4'  '10_5'
+    # 11   PIO       '11'    '11_2'  '11_3'  '11_4'  '11_5'
+    # 12   Ime       '12'    '12_2'  '12_4'  '12_6'  '12_8'
+    # 13   ZO        '13'    '13_2'  '13_3'  '13_4'  '13_5'
+    # 14   Nez       '14'    '14_2'  '14_3'  '14_4'  '14_5'
+    # 15   Ukdopr    '15'    '15_2'  '15_3'  '15_4'  '15_5'
+    # 16   Prihod    '16'    '16_2'  '16_3'  '16_4'  '16_5'
+    # 17   Kf        '17'    '17_2'  '17_3'  '17_4'  '17_5'
+    # 18   Lični     '18'    '18_2'  '18_3'  '18_4'  '18_5'
+    # 19   Osnov     '19'    '19_2'  '19_3'  '19_4'  '19_5'
+    # 20   Porez     '20'    '20_2'  '20_3'  '20_4'  '20_5'
+    # 21   Br.uveć   '21'    '21_2'  '21_3'  '21_4'  '21_5'
+    # 23   Šifra r.m.'23'    '23_2'  '23_3'  '23_4'  '23_5'
+    # 24   Dopr.staž '24'    '24_2'  '24_3'  '24_4'  '24_5'
+    # Vrsta isp.    '20.0'  '20.1'   —       —       —    (radio/checkbox)
+
+    col_maps = {
+        'jmb':     ['3',    '3_2',  '3_3',  '3_4',  '3_5' ],
+        'opcina':  ['12_3', '12_5', '12_7', '12_9', '12_10'],
+        'datum':   ['5',    '5_2',  '5_3',  '5_4',  '5_5' ],
+        'rsati':   ['6',    '6_2',  '6_3',  '6_4',  '6_5' ],
+        'bsati':   ['7',    '7_2',  '7_3',  '7_4',  '7_5' ],
+        'bruto':   ['8',    '8_2',  '8_3',  '8_4',  '8_5' ],
+        'koristi': ['9',    '9_2',  '9_3',  '9_4',  '9_5' ],
+        'ukupno':  ['10',   '10_2', '10_3', '10_4', '10_5'],
+        'pio':     ['11',   '11_2', '11_3', '11_4', '11_5'],
+        'ime':     ['12',   '12_2', '12_4', '12_6', '12_8'],
+        'zo':      ['13',   '13_2', '13_3', '13_4', '13_5'],
+        'nez':     ['14',   '14_2', '14_3', '14_4', '14_5'],
+        'ukdopr':  ['15',   '15_2', '15_3', '15_4', '15_5'],
+        'prihod':  ['16',   '16_2', '16_3', '16_4', '16_5'],
+        'kf':      ['17',   '17_2', '17_3', '17_4', '17_5'],
+        'licni':   ['18',   '18_2', '18_3', '18_4', '18_5'],
+        'osnovica':['19',   '19_2', '19_3', '19_4', '19_5'],
+        'porez':   ['20',   '20_2', '20_3', '20_4', '20_5'],
+        'uvsati':  ['21',   '21_2', '21_3', '21_4', '21_5'],
+        'srm':     ['23',   '23_2', '23_3', '23_4', '23_5'],
+        'staz':    ['24',   '24_2', '24_3', '24_4', '24_5'],
+    }
+
+    vrsta_fields = ['20.0', '20.1', None, None, None]
+
+    for idx, stavka in enumerate(stavke[:5]):
+        z = stavka.zaposlenik
+
+        # Izračun doprinosa
+        ukupno      = stavka.ukupno_bruto
+        pio         = (ukupno * STOPA_PIO).quantize(Decimal('0.01'))
+        zo          = (ukupno * STOPA_ZO).quantize(Decimal('0.01'))
+        nez         = (ukupno * STOPA_NEZ).quantize(Decimal('0.01'))
+        ukupno_dopr = pio + zo + nez
+        neto        = ukupno - ukupno_dopr
+        licni       = stavka.licni_odbitak
+        osnovica    = max(neto - licni, Decimal('0'))
+        datum_isp   = stavka.datum_isplate.strftime('%d.%m.%Y') if stavka.datum_isplate else datum_danas
+
+        def sv(col, val):
+            lst = col_maps.get(col, [])
+            if idx < len(lst) and lst[idx]:
+                fields[lst[idx]] = str(val)
+
+        sv('jmb',      z.jmb or '')
+        sv('opcina',   getattr(z, 'sifra_opcine', '') or '097')
+        sv('datum',    datum_isp)
+        sv('rsati',    int(stavka.radni_sati))
+        sv('bsati',    int(stavka.sati_bolovanja))
+        sv('bruto',    f"{stavka.bruto_placa:.2f}")
+        sv('koristi',  f"{stavka.druge_koristi:.2f}")
+        sv('ukupno',   f"{ukupno:.2f}")
+        sv('pio',      f"{pio:.2f}")
+        sv('ime',      f"{z.prezime} {z.ime}")
+        sv('zo',       f"{zo:.2f}")
+        sv('nez',      f"{nez:.2f}")
+        sv('ukdopr',   f"{ukupno_dopr:.2f}")
+        sv('prihod',   f"{neto:.2f}")
+        sv('kf',       str(z.kf_licnog_odbitka))
+        sv('licni',    f"{licni:.2f}")
+        sv('osnovica', f"{osnovica:.2f}")
+        sv('porez',    f"{stavka.porez:.2f}")
+        sv('uvsati',   '0')
+
+        # Vrsta isplate — '1' (redovi 1 i 2 imaju radio polje, ostali nemaju)
+        if idx < len(vrsta_fields) and vrsta_fields[idx]:
+            fields[vrsta_fields[idx]] = '1'
+
+    # ── Output ──────────────────────────────────────────────────────────
+    writer.update_page_form_field_values(writer.pages[0], fields, auto_regenerate=True)
+
+    output = io.BytesIO()
+    writer.write(output)
+    output.seek(0)
+
+    jib      = getattr(partner, 'jib', '') or getattr(partner, 'sifra', 'X')
+    filename = f"MIP-{jib}-{obracun.mjesec:02d}-{obracun.godina.godina}.pdf"
+
+    response = HttpResponse(output.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
